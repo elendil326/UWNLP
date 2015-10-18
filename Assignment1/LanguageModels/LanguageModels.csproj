@@ -41,6 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ExampleBackOffModel.cs" />
+    <Compile Include="NGram.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SentenceNormalizer.cs" />
   </ItemGroup>

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Text;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace UW.NLP.LanguageModels
 {
@@ -40,6 +42,13 @@ namespace UW.NLP.LanguageModels
             normalizedSentence = AddEndToken(sentence, normalizedSentence);
 
             return normalizedSentence.ToString();
+        }
+
+        public IEnumerable<string> Tokenize(string sentence)
+        {
+            if (sentence == null) throw new ArgumentNullException("sentence");
+
+            return sentence.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries);
         }
 
         private int GetNormalizedLength(int originalLength)
