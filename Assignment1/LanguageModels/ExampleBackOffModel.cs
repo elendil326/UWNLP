@@ -101,7 +101,7 @@ namespace UW.NLP.LanguageModels
             double correlation = 0;
             NGram possibleN_1Gram = new NGram(nGram.NOrder - 1, _stringComparison);
             possibleN_1Gram[0] = nGram[nGram.NOrder - 2];
-            foreach (string word in GetListOfWordsForUnexistentNgram(firstN_1Gram))
+            foreach (string word in GetListOfWordsForInexistentNgram(firstN_1Gram))
             {
                 possibleN_1Gram[1] = word;
                 correlation += GetPML(possibleN_1Gram);
@@ -126,7 +126,7 @@ namespace UW.NLP.LanguageModels
 
             double correlation = 0;
             NGram possibleN_2Gram = new NGram(nGram.NOrder - 2, _stringComparison);
-            foreach (string word in GetListOfWordsForUnexistentNgram(middleN_2Gram))
+            foreach (string word in GetListOfWordsForInexistentNgram(middleN_2Gram))
             {
                 possibleN_2Gram[0] = word;
                 correlation += GetPML(possibleN_2Gram);
@@ -135,7 +135,7 @@ namespace UW.NLP.LanguageModels
             return GetPML(lastN_2Gram) / correlation;
         }
 
-        private HashSet<string> GetListOfWordsForUnexistentNgram(NGram N_1gram)
+        private HashSet<string> GetListOfWordsForInexistentNgram(NGram N_1gram)
         {
             NGram possibleNGram = new NGram(N_1gram.NOrder + 1, _stringComparison);
             for (int i = 0; i < N_1gram.NOrder; i++)
