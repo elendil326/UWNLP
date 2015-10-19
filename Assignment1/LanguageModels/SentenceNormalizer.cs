@@ -28,6 +28,7 @@ namespace UW.NLP.LanguageModels
             StartToken = startToken;
             EndToken = endToken;
             Separator = separator;
+            PossibleEndToken = possibleEndToken;
         }
 
         public string Normalize(string sentence)
@@ -37,7 +38,7 @@ namespace UW.NLP.LanguageModels
             StringBuilder normalizedSentence = new StringBuilder(GetNormalizedLength(sentence.Length));
 
             normalizedSentence = AddStartTokens(normalizedSentence);
-
+            normalizedSentence.Append(sentence);
             normalizedSentence = AddEndToken(sentence, normalizedSentence);
 
             return normalizedSentence.ToString();
