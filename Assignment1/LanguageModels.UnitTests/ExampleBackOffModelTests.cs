@@ -28,7 +28,7 @@ I want you";
         public void Probability_FixedBigramTogenerateAllPossibleTrigrams_SumIsCloseToTwo()
         {
             ExampleBackOffModel exampleModel = new ExampleBackOffModel();
-            exampleModel.TrainModel(_trainingSet.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries));
+            exampleModel.Train(_trainingSet.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries));
 
             NGram testTrigram = new NGram(3, StringComparison.Ordinal);
             testTrigram[0] = "I";
@@ -48,7 +48,7 @@ I want you";
         public void Probability_AllPossibleTrigrams_SumIsCloseToTwoForEachOne()
         {
             ExampleBackOffModel exampleModel = new ExampleBackOffModel();
-            exampleModel.TrainModel(_trainingSet.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries));
+            exampleModel.Train(_trainingSet.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries));
             List<string> vocabulary = new List<string>(exampleModel.Vocabulary);
 
             for (int i = 0; i < vocabulary.Count; i++)
@@ -81,7 +81,7 @@ I want you";
         public void Probability_RandomSentencesFromVocabulary_ProbabilityGreaterThanOne()
         {
             ExampleBackOffModel exampleModel = new ExampleBackOffModel();
-            exampleModel.TrainModel(_trainingSet.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries));
+            exampleModel.Train(_trainingSet.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries));
             List<string> vocabulary = new List<string>(exampleModel.Vocabulary);
 
             double sumProbabilities = 0;
@@ -106,19 +106,19 @@ I want you";
             ExampleBackOffModel exampleModel = new ExampleBackOffModel();
             using (StreamReader sr = new StreamReader("TestData\\brown.txt"))
             {
-                exampleModel.TrainModel(GetLines(sr));
+                exampleModel.Train(GetLines(sr));
             }
 
             exampleModel = new ExampleBackOffModel();
             using (StreamReader sr = new StreamReader("TestData\\gutenberg.txt"))
             {
-                exampleModel.TrainModel(GetLines(sr));
+                exampleModel.Train(GetLines(sr));
             }
 
             exampleModel = new ExampleBackOffModel();
             using (StreamReader sr = new StreamReader("TestData\\reuters.txt"))
             {
-                exampleModel.TrainModel(GetLines(sr));
+                exampleModel.Train(GetLines(sr));
             }
         }
 

@@ -23,5 +23,7 @@ namespace UW.NLP.LanguageModels
         public StringComparison StringComparison { get; set; }
 
         public StringComparer StringComparer { get; set; }
+
+        public double BackOffBeta { get; set; }
     }
 }

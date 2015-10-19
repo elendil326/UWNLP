@@ -40,7 +40,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BackOffModel.cs" />
     <Compile Include="ExampleBackOffModel.cs" />
+    <Compile Include="ExampleBackOffModelWithDiscounting.cs" />
+    <Compile Include="ILanguageModel.cs" />
     <Compile Include="LanguageModelSettings.cs" />
     <Compile Include="NGram.cs" />
     <Compile Include="NGramCounter.cs" />
