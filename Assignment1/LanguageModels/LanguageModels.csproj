@@ -41,6 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ExampleBackOffModel.cs" />
+    <Compile Include="LanguageModelSettings.cs" />
     <Compile Include="NGram.cs" />
     <Compile Include="NGramCounter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

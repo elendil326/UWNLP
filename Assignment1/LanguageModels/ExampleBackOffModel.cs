@@ -6,14 +6,7 @@ namespace UW.NLP.LanguageModels
 {
     public class ExampleBackOffModel
     {
-        private int _nGramOrder = 3;
-        private int _logBase = 2;
-        private string _startToken = "{{*}}";
-        private string _endToken = "{{END}}";
-        private string _separator = " ";
-        private string _possibleEnd = ".";
-        private StringComparison _stringComparison = StringComparison.Ordinal;
-        private StringComparer _stringComparer = StringComparer.Ordinal;
+        private LanguageModelSettings _settings;
 
         private SentenceNormalizer _normalizer;
         private NGramCounter _nGramCounter;
@@ -21,9 +14,24 @@ namespace UW.NLP.LanguageModels
         public HashSet<string> Vocabulary { get { return _nGramCounter.Vocabulary; } }
 
         public ExampleBackOffModel()
+            :this(new LanguageModelSettings
+            {
+                NGramOrder = 3,
+                LogBase = 2,
+                StartToken = "{{*}}",
+                EndToken = "{{END}}",
+                Separator = " ",
+                PossibleEnd = ".",
+                StringComparison = StringComparison.Ordinal,
+                StringComparer = StringComparer.Ordinal
+            })
+        { }
+
+        public ExampleBackOffModel(LanguageModelSettings settings)
         {
-            _normalizer = new SentenceNormalizer(_nGramOrder, _startToken, _endToken, _separator, _possibleEnd);
-            _nGramCounter = new NGramCounter(_nGramOrder, _stringComparison, _stringComparer);
+            _settings = settings;
+            _normalizer = new SentenceNormalizer(settings.NGramOrder, settings.StartToken, settings.EndToken, settings.Separator, settings.PossibleEnd);
+            _nGramCounter = new NGramCounter(settings.NGramOrder, settings.StringComparison, settings.StringComparer);
         }
 
         public void TrainModel(IEnumerable<string> sentences)
@@ -46,9 +54,9 @@ namespace UW.NLP.LanguageModels
             List<string> tokens = _normalizer.Tokenize(normalizedSentence).ToList();
             double sentenceProbability = 1;
 
-            for (int currentTokenIndex = _nGramOrder - 1; currentTokenIndex < tokens.Count; currentTokenIndex++)
+            for (int currentTokenIndex = _settings.NGramOrder - 1; currentTokenIndex < tokens.Count; currentTokenIndex++)
             {
-                NGram currentNGram = new NGram(_nGramOrder, _stringComparison);
+                NGram currentNGram = new NGram(_settings.NGramOrder, _settings.StringComparison);
                 for (int j = 0; j < currentNGram.NOrder; j++)
                 {
                     currentNGram[j] = tokens[currentTokenIndex - currentNGram.NOrder + 1 + j];
@@ -68,7 +76,7 @@ namespace UW.NLP.LanguageModels
             }
             else
             {
-                NGram lastN_1Gram = new NGram(nGram.NOrder - 1, _stringComparison);
+                NGram lastN_1Gram = new NGram(nGram.NOrder - 1, _settings.StringComparison);
                 for (int i = 0; i < lastN_1Gram.NOrder; i++)
                 {
                     lastN_1Gram[i] = nGram[i + 1];
@@ -92,14 +100,14 @@ namespace UW.NLP.LanguageModels
 
         private double GetP2(NGram nGram, NGram lastN_1Gram)
         {
-            NGram firstN_1Gram = new NGram(nGram.NOrder - 1, _stringComparison);
+            NGram firstN_1Gram = new NGram(nGram.NOrder - 1, _settings.StringComparison);
             for (int i = 0; i < firstN_1Gram.NOrder; i++)
             {
                 firstN_1Gram[i] = nGram[i];
             }
 
             double correlation = 0;
-            NGram possibleN_1Gram = new NGram(nGram.NOrder - 1, _stringComparison);
+            NGram possibleN_1Gram = new NGram(nGram.NOrder - 1, _settings.StringComparison);
             possibleN_1Gram[0] = nGram[nGram.NOrder - 2];
             foreach (string word in GetListOfWordsForInexistentNgram(firstN_1Gram))
             {
@@ -112,20 +120,20 @@ namespace UW.NLP.LanguageModels
 
         private double GetP3(NGram nGram)
         {
-            NGram lastN_2Gram = new NGram(nGram.NOrder - 2, _stringComparison);
+            NGram lastN_2Gram = new NGram(nGram.NOrder - 2, _settings.StringComparison);
             for (int i = 0; i < lastN_2Gram.NOrder; i++)
             {
                 lastN_2Gram[i] = nGram[i + 2];
             }
 
-            NGram middleN_2Gram = new NGram(nGram.NOrder - 2, _stringComparison);
+            NGram middleN_2Gram = new NGram(nGram.NOrder - 2, _settings.StringComparison);
             for (int i = 0; i < middleN_2Gram.NOrder; i++)
             {
                 middleN_2Gram[i] = nGram[i + 1];
             }
 
             double correlation = 0;
-            NGram possibleN_2Gram = new NGram(nGram.NOrder - 2, _stringComparison);
+            NGram possibleN_2Gram = new NGram(nGram.NOrder - 2, _settings.StringComparison);
             foreach (string word in GetListOfWordsForInexistentNgram(middleN_2Gram))
             {
                 possibleN_2Gram[0] = word;
@@ -137,13 +145,13 @@ namespace UW.NLP.LanguageModels
 
         private HashSet<string> GetListOfWordsForInexistentNgram(NGram N_1gram)
         {
-            NGram possibleNGram = new NGram(N_1gram.NOrder + 1, _stringComparison);
+            NGram possibleNGram = new NGram(N_1gram.NOrder + 1, _settings.StringComparison);
             for (int i = 0; i < N_1gram.NOrder; i++)
             {
                 possibleNGram[i] = N_1gram[i];
             }
 
-            HashSet<string> words = new HashSet<string>(_stringComparer);
+            HashSet<string> words = new HashSet<string>(_settings.StringComparer);
             foreach (string word in Vocabulary)
             {
                 possibleNGram[N_1gram.NOrder] = word;
@@ -166,7 +174,7 @@ namespace UW.NLP.LanguageModels
             }
             else
             {
-                NGram N_1gram = new NGram(nGram.NOrder - 1, _stringComparison);
+                NGram N_1gram = new NGram(nGram.NOrder - 1, _settings.StringComparison);
                 for (int i = 0; i < N_1gram.NOrder; i++)
                 {
                     N_1gram[i] = nGram[i];

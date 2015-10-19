@@ -65,11 +65,11 @@ namespace UW.NLP.LanguageModels
             {
                 if (sb.Length > 0)
                 {
-                    sb.AppendFormat(",{0}", _tokens[i]);
+                    sb.AppendFormat(",<<{0}>>", _tokens[i]);
                 }
                 else
                 {
-                    sb.Append(_tokens[i]);
+                    sb.AppendFormat("<<{0}>>", _tokens[i]);
                 }
             }
 

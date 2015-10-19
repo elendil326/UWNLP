@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Text;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -10,6 +11,18 @@ namespace UW.NLP.LanguageModels.UnitTests
     {
         private string _trainingSet = @"I want to.
 I want you";
+
+        private LanguageModelSettings _settings = new LanguageModelSettings
+        {
+            NGramOrder = 3,
+            LogBase = 2,
+            StartToken = "{{*}}",
+            EndToken = "{{END}}",
+            Separator = " ",
+            PossibleEnd = ".",
+            StringComparison = StringComparison.Ordinal,
+            StringComparer = StringComparer.Ordinal
+        };
 
         [TestMethod]
         public void Probability_FixedBigramTogenerateAllPossibleTrigrams_SumIsCloseToTwo()
@@ -40,12 +53,12 @@ I want you";
 
             for (int i = 0; i < vocabulary.Count; i++)
             {
-                if (vocabulary[i] == "{{END}}")
+                if (vocabulary[i] == _settings.EndToken)
                     continue;
 
                 for (int j = 0; j < vocabulary.Count; j++)
                 {
-                    if (vocabulary[j] == "{{END}}")
+                    if (vocabulary[j] == _settings.EndToken)
                         continue;
 
                     NGram nGram = new NGram(3, StringComparison.Ordinal);
@@ -87,6 +100,38 @@ I want you";
             Assert.IsTrue(sumProbabilities > 1);
         }
 
+        [TestMethod]
+        public void TrainModel_RealCorpora_NoMemoryException()
+        {
+            ExampleBackOffModel exampleModel = new ExampleBackOffModel();
+            using (StreamReader sr = new StreamReader("TestData\\brown.txt"))
+            {
+                exampleModel.TrainModel(GetLines(sr));
+            }
+
+            exampleModel = new ExampleBackOffModel();
+            using (StreamReader sr = new StreamReader("TestData\\gutenberg.txt"))
+            {
+                exampleModel.TrainModel(GetLines(sr));
+            }
+
+            exampleModel = new ExampleBackOffModel();
+            using (StreamReader sr = new StreamReader("TestData\\reuters.txt"))
+            {
+                exampleModel.TrainModel(GetLines(sr));
+            }
+        }
+
+        private IEnumerable<string> GetLines(StreamReader sr)
+        {
+            string line = sr.ReadLine();
+            while (line != null)
+            {
+                yield return line;
+                line = sr.ReadLine();
+            }
+        }
+
         private string GetTestCorpus(List<string> vocabulary, int sentences)
         {
             StringBuilder sb = new StringBuilder();
@@ -102,18 +147,16 @@ I want you";
         private string GetRandomSentence(Random r, List<string> vocabulary)
         {
             StringBuilder sb = new StringBuilder();
-            string endToken = "{{END}}";
-            string separator = " ";
 
             while (true)
             {
                 int i = r.Next(0, vocabulary.Count);
-                if (vocabulary[i] == endToken)
+                if (vocabulary[i] == _settings.EndToken)
                 {
                     break;
                 }
                 sb.Append(vocabulary[i]);
-                sb.Append(separator);
+                sb.Append(_settings.Separator);
             }
 
             return sb.ToString();
