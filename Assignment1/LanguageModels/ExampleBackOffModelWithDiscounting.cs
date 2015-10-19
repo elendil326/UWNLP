@@ -46,14 +46,14 @@ namespace UW.NLP.LanguageModels
             return GetPMLStar(nGram);
         }
 
-        private double GetP2(NGram nGram)
+        private double GetP2(NGram nGram, NGram lastN_1Gram)
         {
-
+            return 0;
         }
 
         private double GetP3(NGram nGram)
         {
-
+            return 0;
         }
     }
 }
