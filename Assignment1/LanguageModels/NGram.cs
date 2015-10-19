@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace UW.NLP.LanguageModels
 {
@@ -11,7 +7,7 @@ namespace UW.NLP.LanguageModels
         private string[] _tokens;
         private StringComparison _stringComparison;
 
-        public int N { get; private set; }
+        public int NOrder { get; private set; }
 
         public string this[int i]
         {
@@ -26,17 +22,17 @@ namespace UW.NLP.LanguageModels
 
         public NGram(int n, StringComparison stringComparison)
         {
-            N = n;
+            NOrder = n;
             _tokens = new string[n];
             _stringComparison = stringComparison;
         }
 
         public bool Equals(NGram other)
         {
-            if (other == null || other.N != N)
+            if (other == null || other.NOrder != NOrder)
                 return false;
 
-            for (int i = 0; i < N; i++)
+            for (int i = 0; i < NOrder; i++)
             {
                 if (!string.Equals(other[i], this[i], _stringComparison))
                     return false;
@@ -47,8 +43,8 @@ namespace UW.NLP.LanguageModels
 
         public override int GetHashCode()
         {
-            int hashCode = N;
-            for (int i = 0; i < N; i++)
+            int hashCode = NOrder;
+            for (int i = 0; i < NOrder; i++)
             {
                 hashCode = hashCode ^ _tokens[i].GetHashCode();
             }

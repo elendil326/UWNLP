@@ -1,33 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace UW.NLP.LanguageModels
 {
     public class ExampleBackOffModel
     {
-        private int _nGram = 3;
+        private int _nGramOrder = 3;
+        private int _logBase = 2;
         private string _startToken = "{{*}}";
         private string _endToken = "{{END}}";
         private string _separator = " ";
         private string _possibleEnd = ".";
+        private StringComparison _stringComparison = StringComparison.Ordinal;
+        private StringComparer _stringComparer = StringComparer.Ordinal;
 
         private SentenceNormalizer _normalizer;
-        private HashSet<string> _alphabet;
-        private Dictionary<int, Dictionary<NGram, int>> _nGramCounts;
+        private NGramCounter _nGramCounter;
+
+        public HashSet<string> Vocabulary { get { return _nGramCounter.Vocabulary; } }
 
         public ExampleBackOffModel()
         {
-            _normalizer = new SentenceNormalizer(_nGram, _startToken, _endToken, _separator, _possibleEnd);
-            _alphabet = new HashSet<string>(StringComparer.Ordinal);
-
-            _nGramCounts = new Dictionary<int, Dictionary<NGram, int>>();
-            for (int i = 1; i < _nGram + 1; i++)
-            {
-                _nGramCounts[i] = new Dictionary<NGram, int>();
-            }
+            _normalizer = new SentenceNormalizer(_nGramOrder, _startToken, _endToken, _separator, _possibleEnd);
+            _nGramCounter = new NGramCounter(_nGramOrder, _stringComparison);
         }
 
         public void TrainModel(IEnumerable<string> sentences)
@@ -38,62 +34,127 @@ namespace UW.NLP.LanguageModels
             {
                 string normalizedSentence = _normalizer.Normalize(sentence);
                 List<string> tokens = _normalizer.Tokenize(normalizedSentence).ToList();
-                PopulateNGramCounts(tokens);
+                _nGramCounter.PopulateNGramCounts(tokens);
             }
         }
 
-        private void PopulateNGramCounts(List<string> tokens)
+        public double Probability(string sentence)
         {
-            int count = 0;
+            if (sentence == null) throw new ArgumentNullException("sentence");
 
-            // Traverse the list of tokens once per N-Order dictionary, and shift it to the left so
-            // new NGrams are added to the higher N-Order dictionaries.
-            for (int nOrder = 1; nOrder < _nGram + 1; nOrder++)
+            string normalizedSentence = _normalizer.Normalize(sentence);
+            List<string> tokens = _normalizer.Tokenize(normalizedSentence).ToList();
+            double sentenceProbability = 1;
+
+            for (int currentTokenIndex = _nGramOrder - 1; currentTokenIndex < tokens.Count; currentTokenIndex++)
             {
-                Dictionary<int, NGram> lastNGramOfOrderN = new Dictionary<int, NGram>();
-
-                // Shift the list of tokens to the left on each iteration.
-                for (int i = nOrder - 1; i < tokens.Count; i++)
+                NGram currentNGram = new NGram(_nGramOrder, _stringComparison);
+                for (int j = 0; j < currentNGram.NOrder; j++)
                 {
-                    _alphabet.Add(tokens[i]);
-                    PopulateNGramPerDictionary(nOrder, tokens[i], count, lastNGramOfOrderN);
-                    count++;
+                    currentNGram[j] = tokens[currentTokenIndex - currentNGram.NOrder + 1 + j];
                 }
 
-                // Verify if the last token populated extra NGrams.
-                PopulateNGramPerDictionary(nOrder, string.Empty, count, lastNGramOfOrderN);
-            }
-        }
-
-        private void PopulateNGramPerDictionary(int firstNOrder, string token, int count, Dictionary<int, NGram> lastNGramOfOrderN)
-        {
-            // Traverse the dictionary of NGrams to add the token to each one.
-            for (int nOrder = firstNOrder; nOrder < _nGramCounts.Count + 1; nOrder++)
-            {
-                // Determine if the previous NGram of order N is full and ready to be stored.
-                if (count % nOrder == 0)
+                if (_nGramCounter.GetNGramCount(currentNGram) > 0)
                 {
-                    // Verify this is not the first round.
-                    if (lastNGramOfOrderN.ContainsKey(nOrder))
+                    sentenceProbability *= GetPML(currentNGram);
+                }
+                else
+                {
+                    NGram lastN_1Gram = new NGram(currentNGram.NOrder - 1, _stringComparison);
+                    for (int i = 0; i < lastN_1Gram.NOrder; i++)
                     {
-                        NGram previousBuiltNGram = lastNGramOfOrderN[nOrder];
-
-                        // If the NGram is new, the counter dictionary won't have it, so add it.
-                        if (!_nGramCounts[nOrder].ContainsKey(previousBuiltNGram))
-                        {
-                            _nGramCounts[nOrder][previousBuiltNGram] = 0;
-                        }
-
-                        _nGramCounts[nOrder][previousBuiltNGram]++;
+                        lastN_1Gram[i] = currentNGram[i + 1];
                     }
 
-                    // The last NGram is full, create a new one with for the current token.
-                    lastNGramOfOrderN[nOrder] = new NGram(nOrder, StringComparison.Ordinal);
-                }
+                    if (_nGramCounter.GetNGramCount(lastN_1Gram) > 0)
+                    {
+                        NGram firstN_1Gram = new NGram(currentNGram.NOrder - 1, _stringComparison);
+                        for (int i = 0; i < firstN_1Gram.NOrder; i++)
+                        {
+                            firstN_1Gram[i] = currentNGram[i];
+                        }
 
-                // Store the token into the NGram.
-                lastNGramOfOrderN[nOrder][count % nOrder] = token;
+                        double correlation = 0;
+                        NGram possibleN_1Gram = new NGram(currentNGram.NOrder - 1, _stringComparison);
+                        possibleN_1Gram[0] = currentNGram[currentNGram.NOrder - 2];
+                        foreach (string word in GetListOfWordsForUnexistentNgram(firstN_1Gram))
+                        {
+                            possibleN_1Gram[1] = word;
+                            correlation += GetPML(possibleN_1Gram);
+                        }
+
+                        sentenceProbability *= GetPML(lastN_1Gram) / correlation;
+                    }
+                    else
+                    {
+                        NGram lastN_2Gram = new NGram(currentNGram.NOrder - 2, _stringComparison);
+                        for (int i = 0; i < lastN_2Gram.NOrder; i++)
+                        {
+                            lastN_2Gram[i] = currentNGram[i + 2];
+                        }
+
+                        NGram middleN_2Gram = new NGram(currentNGram.NOrder - 2, _stringComparison);
+                        for (int i = 0; i < middleN_2Gram.NOrder; i++)
+                        {
+                            middleN_2Gram[i] = currentNGram[i + 1];
+                        }
+
+                        double correlation = 0;
+                        NGram possibleN_2Gram = new NGram(currentNGram.NOrder - 2, _stringComparison);
+                        foreach (string word in GetListOfWordsForUnexistentNgram(middleN_2Gram))
+                        {
+                            possibleN_2Gram[0] = word;
+                            correlation += GetPML(possibleN_2Gram);
+                        }
+
+                        sentenceProbability *= GetPML(lastN_2Gram) / correlation;
+                    }
+                }
             }
+
+            return sentenceProbability;
+        }
+
+        private HashSet<string> GetListOfWordsForUnexistentNgram(NGram N_1gram)
+        {
+            NGram possibleNGram = new NGram(N_1gram.NOrder + 1, _stringComparison);
+            for (int i = 0; i < N_1gram.NOrder; i++)
+            {
+                possibleNGram[i] = N_1gram[i];
+            }
+
+            HashSet<string> words = new HashSet<string>(_stringComparer);
+            foreach (string word in Vocabulary)
+            {
+                possibleNGram[N_1gram.NOrder] = word;
+                if (_nGramCounter.GetNGramCount(possibleNGram) == 0)
+                {
+                    words.Add(word);
+                }
+            }
+
+            return words;
+        }
+
+        private double GetPML(NGram nGram)
+        {
+            int numerator = _nGramCounter.GetNGramCount(nGram);
+            int denominator = 0;
+            if (nGram.NOrder == 1)
+            {
+                denominator = _nGramCounter.TotalWords;
+            }
+            else
+            {
+                NGram N_1gram = new NGram(nGram.NOrder - 1, _stringComparison);
+                for (int i = 0; i < N_1gram.NOrder; i++)
+                {
+                    N_1gram[i] = nGram[i];
+                }
+                denominator = _nGramCounter.GetNGramCount(N_1gram);
+            }
+
+            return (denominator == 0) ? double.MaxValue : numerator / denominator;
         }
     }
 }
