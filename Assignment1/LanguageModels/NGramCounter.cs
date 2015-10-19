@@ -10,6 +10,7 @@ namespace UW.NLP.LanguageModels
     {
         private Dictionary<int, Dictionary<NGram, int>> _nGramCountDictionaries;
         private StringComparison _stringComparison;
+        private StringComparer _stringComparer;
 
         public int MaxNOrder { get; private set; }
 
@@ -17,10 +18,12 @@ namespace UW.NLP.LanguageModels
 
         public int TotalWords { get; private set; }
 
-        public NGramCounter(int maxNOrder, StringComparison stringComparison)
+        public NGramCounter(int maxNOrder, StringComparison stringComparison, StringComparer stringComparer)
         {
             MaxNOrder = maxNOrder;
             _stringComparison = stringComparison;
+            _stringComparer = stringComparer;
+            Vocabulary = new HashSet<string>(stringComparer);
 
             _nGramCountDictionaries = new Dictionary<int, Dictionary<NGram, int>>();
             for (int i = 1; i < MaxNOrder + 1; i++)
@@ -32,7 +35,7 @@ namespace UW.NLP.LanguageModels
         public void PopulateNGramCounts(List<string> tokens)
         {
             // Add start tokens.
-            TotalWords += MaxNOrder - 1;
+            //TotalWords += MaxNOrder - 1;
 
             // Populate NGrams of the START token. The NGram of higher order N doesn't have this count.
             for (int nOrder = 1; nOrder < MaxNOrder; nOrder++)
@@ -63,9 +66,9 @@ namespace UW.NLP.LanguageModels
                     NGram currentNGram = new NGram(nOrder, _stringComparison);
 
                     // Populate the NGram with the previous words according to the NOrder.
-                    for (int nGramTokenIndex = nOrder - 1; nGramTokenIndex >= 0; nGramTokenIndex--)
+                    for (int nGramTokenIndex = 0; nGramTokenIndex < currentNGram.NOrder; nGramTokenIndex++)
                     {
-                        int previousTokenIndex = currentTokenIndex - nGramTokenIndex;
+                        int previousTokenIndex = currentTokenIndex - currentNGram.NOrder + nGramTokenIndex + 1;
                         currentNGram[nGramTokenIndex] = tokens[previousTokenIndex];
                     }
 
@@ -85,7 +88,7 @@ namespace UW.NLP.LanguageModels
         {
             if (nGram == null) throw new ArgumentNullException("ngram");
 
-            return (!_nGramCountDictionaries.ContainsKey(nGram.NOrder) || _nGramCountDictionaries[nGram.NOrder].ContainsKey(nGram))
+            return (!_nGramCountDictionaries.ContainsKey(nGram.NOrder) || !_nGramCountDictionaries[nGram.NOrder].ContainsKey(nGram))
                 ? 0
                 : _nGramCountDictionaries[nGram.NOrder][nGram]; 
         }

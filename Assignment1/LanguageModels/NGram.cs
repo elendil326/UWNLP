@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 
 namespace UW.NLP.LanguageModels
 {
@@ -55,6 +56,24 @@ namespace UW.NLP.LanguageModels
         public override bool Equals(object obj)
         {
             return Equals(obj as NGram);
+        }
+
+        public override string ToString()
+        {
+            StringBuilder sb = new StringBuilder(NOrder * 2);
+            for (int i = 0; i < _tokens.Length; i++)
+            {
+                if (sb.Length > 0)
+                {
+                    sb.AppendFormat(",{0}", _tokens[i]);
+                }
+                else
+                {
+                    sb.Append(_tokens[i]);
+                }
+            }
+
+            return sb.ToString();
         }
     }
 }
