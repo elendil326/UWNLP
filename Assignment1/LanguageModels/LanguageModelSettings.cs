@@ -24,6 +24,11 @@ namespace UW.NLP.LanguageModels
 
         public StringComparer StringComparer { get; set; }
 
-        public double BackOffBeta { get; set; }
+        public Dictionary<int, double> BackOffBetaPerOrder { get; private set; }
+
+        public LanguageModelSettings()
+        {
+            BackOffBetaPerOrder = new Dictionary<int, double>();
+        }
     }
 }

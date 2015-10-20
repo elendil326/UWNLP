@@ -101,6 +101,7 @@ I want you";
         }
 
         [TestMethod]
+        [TestCategory("Load")]
         public void TrainModel_RealCorpora_NoMemoryException()
         {
             ExampleBackOffModel exampleModel = new ExampleBackOffModel();

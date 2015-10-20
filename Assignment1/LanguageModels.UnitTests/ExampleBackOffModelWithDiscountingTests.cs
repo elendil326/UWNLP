@@ -78,6 +78,7 @@ I want you";
         }
 
         [TestMethod]
+        [TestCategory("Load")]
         public void Probability_RandomSentencesFromVocabulary_ProbabilityLessThanOne()
         {
             ExampleBackOffModelWithDiscounting exampleModel = new ExampleBackOffModelWithDiscounting();
@@ -102,6 +103,7 @@ I want you";
         }
 
         [TestMethod]
+        [TestCategory("Load")]
         public void TrainModel_RealCorpora_NoMemoryException()
         {
             ExampleBackOffModelWithDiscounting exampleModel = new ExampleBackOffModelWithDiscounting();

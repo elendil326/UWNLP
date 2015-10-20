@@ -16,7 +16,8 @@ namespace UW.NLP.LanguageModels
         public HashSet<string> Vocabulary { get { return NGramCounter.Vocabulary; } }
 
         public BackOffModel()
-            :this(new LanguageModelSettings
+        {
+            Settings = new LanguageModelSettings
             {
                 NGramOrder = 3,
                 LogBase = 2,
@@ -25,16 +26,18 @@ namespace UW.NLP.LanguageModels
                 Separator = " ",
                 PossibleEnd = ".",
                 StringComparison = StringComparison.Ordinal,
-                StringComparer = StringComparer.Ordinal,
-                BackOffBeta = 0.75
-            })
-        { }
+                StringComparer = StringComparer.Ordinal
+            };
+            Settings.BackOffBetaPerOrder[1] = 0.75;
+            Settings.BackOffBetaPerOrder[2] = 0.5;
+            Settings.BackOffBetaPerOrder[3] = 0.5;
+            Init();
+        }
 
         public BackOffModel(LanguageModelSettings settings)
         {
             Settings = settings;
-            Normalizer = new SentenceNormalizer(settings.NGramOrder, settings.StartToken, settings.EndToken, settings.Separator, settings.PossibleEnd);
-            NGramCounter = new NGramCounter(settings.NGramOrder, settings.StringComparison, settings.StringComparer);
+            Init();
         }
 
         public virtual void Train(IEnumerable<string> sentences)
@@ -138,7 +141,7 @@ namespace UW.NLP.LanguageModels
 
         internal double GetPMLWithDiscount(NGram nGram)
         {
-            double numerator = NGramCounter.GetNGramCount(nGram) - Settings.BackOffBeta;
+            double numerator = NGramCounter.GetNGramCount(nGram) - Settings.BackOffBetaPerOrder[nGram.NOrder];
             double denominator = 0;
             if (nGram.NOrder == 1)
             {
@@ -174,6 +177,12 @@ namespace UW.NLP.LanguageModels
             }
 
             return probability;
+        }
+
+        private void Init()
+        {
+            Normalizer = new SentenceNormalizer(Settings.NGramOrder, Settings.StartToken, Settings.EndToken, Settings.Separator, Settings.PossibleEnd);
+            NGramCounter = new NGramCounter(Settings.NGramOrder, Settings.StringComparison, Settings.StringComparer);
         }
     }
 }
