@@ -18,42 +18,51 @@ namespace UW.NLP.LanguageModels
 
         public override double Probability(NGram nGram)
         {
-            if (NGramCounter.GetNGramCount(nGram) > 0)
+            Func<NGram, double> probabilityFunction;
+            if (nGram.NOrder == 1)
             {
-                return GetP1(nGram);
+                probabilityFunction = GetPML;
             }
             else
             {
-                NGram lastN_1Gram = new NGram(nGram.NOrder - 1, Settings.StringComparison);
-                for (int i = 0; i < lastN_1Gram.NOrder; i++)
-                {
-                    lastN_1Gram[i] = nGram[i + 1];
-                }
-
-                if (NGramCounter.GetNGramCount(lastN_1Gram) > 0)
-                {
-                    return GetP2(nGram, lastN_1Gram);
-                }
-                else
-                {
-                    return GetP3(nGram);
-                }
+                probabilityFunction = Probability;
             }
+            return NGramCounter.GetNGramCount(nGram) > 0 ? GetP1(nGram) : GetP2(nGram, probabilityFunction);
         }
 
         private double GetP1(NGram nGram)
         {
-            return GetPMLStar(nGram);
+            return GetPMLWithDiscount(nGram);
         }
 
-        private double GetP2(NGram nGram, NGram lastN_1Gram)
+        private double GetP2(NGram nGram, Func<NGram, double> probabilityFunction)
         {
-            return 0;
-        }
+            NGram firstN_1Gram = new NGram(nGram.NOrder - 1, Settings.StringComparison);
+            for (int i = 0; i < firstN_1Gram.NOrder; i++)
+            {
+                firstN_1Gram[i] = nGram[i];
+            }
 
-        private double GetP3(NGram nGram)
-        {
-            return 0;
+            NGram lastN_1Gram = new NGram(nGram.NOrder - 1, Settings.StringComparison);
+            for (int i = 0; i < lastN_1Gram.NOrder; i++)
+            {
+                lastN_1Gram[i] = nGram[i + 1];
+            }
+
+            NGram possibleLastN_1Gram = new NGram(lastN_1Gram.NOrder, Settings.StringComparison);
+            for (int i = 0; i < lastN_1Gram.NOrder - 1; i++)
+            {
+                possibleLastN_1Gram[i] = lastN_1Gram[i];
+            }
+
+            double denominator = 0;
+            foreach (string word in GetListOfWordsForInexistentNGram(firstN_1Gram))
+            {
+                possibleLastN_1Gram[possibleLastN_1Gram.NOrder - 1] = word;
+                denominator += probabilityFunction(possibleLastN_1Gram);
+            }
+
+            return Alpha(firstN_1Gram) * (probabilityFunction(lastN_1Gram) / denominator);
         }
     }
 }

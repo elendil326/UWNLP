@@ -94,6 +94,27 @@ namespace UW.NLP.LanguageModels
             return words;
         }
 
+        internal HashSet<string> GetListOfWordsForExistentNGram(NGram N_1gram)
+        {
+            NGram possibleNGram = new NGram(N_1gram.NOrder + 1, Settings.StringComparison);
+            for (int i = 0; i < N_1gram.NOrder; i++)
+            {
+                possibleNGram[i] = N_1gram[i];
+            }
+
+            HashSet<string> words = new HashSet<string>(Settings.StringComparer);
+            foreach (string word in Vocabulary)
+            {
+                possibleNGram[N_1gram.NOrder] = word;
+                if (NGramCounter.GetNGramCount(possibleNGram) > 0)
+                {
+                    words.Add(word);
+                }
+            }
+
+            return words;
+        }
+
         internal double GetPML(NGram nGram)
         {
             double numerator = NGramCounter.GetNGramCount(nGram);
@@ -115,7 +136,7 @@ namespace UW.NLP.LanguageModels
             return numerator / denominator;
         }
 
-        internal double GetPMLStar(NGram nGram)
+        internal double GetPMLWithDiscount(NGram nGram)
         {
             double numerator = NGramCounter.GetNGramCount(nGram) - Settings.BackOffBeta;
             double denominator = 0;
@@ -134,6 +155,25 @@ namespace UW.NLP.LanguageModels
             }
 
             return numerator / denominator;
+        }
+
+        internal double Alpha(NGram n_1Gram)
+        {
+            double probability = 1;
+
+            foreach (string word in  GetListOfWordsForExistentNGram(n_1Gram))
+            {
+                NGram possibleNGram = new NGram(n_1Gram.NOrder + 1, Settings.StringComparison);
+                for (int i = 0; i < n_1Gram.NOrder; i++)
+                {
+                    possibleNGram[i] = n_1Gram[i];
+                }
+                possibleNGram[possibleNGram.NOrder - 1] = word;
+
+                probability -= GetPMLWithDiscount(possibleNGram);
+            }
+
+            return probability;
         }
     }
 }

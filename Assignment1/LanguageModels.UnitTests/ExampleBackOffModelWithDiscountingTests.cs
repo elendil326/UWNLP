@@ -1,13 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace UW.NLP.LanguageModels.UnitTests
 {
     [TestClass]
-    public class ExampleBackOffModelTests
+    public class ExampleBackOffModelWithDiscountingTests
     {
         private string _trainingSet = @"I want to.
 I want you";
@@ -25,9 +25,9 @@ I want you";
         };
 
         [TestMethod]
-        public void Probability_FixedBigramTogenerateAllPossibleTrigrams_SumIsCloseToTwo()
+        public void Probability_FixedBigramTogenerateAllPossibleTrigrams_SumIsCloseToOne()
         {
-            ExampleBackOffModel exampleModel = new ExampleBackOffModel();
+            ExampleBackOffModelWithDiscounting exampleModel = new ExampleBackOffModelWithDiscounting();
             exampleModel.Train(_trainingSet.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries));
 
             NGram testTrigram = new NGram(3, StringComparison.Ordinal);
@@ -41,13 +41,13 @@ I want you";
                 sumOfAllProbabilities += exampleModel.Probability(testTrigram);
             }
 
-            Assert.AreEqual(2, Math.Round(sumOfAllProbabilities));
+            Assert.AreEqual(1, Math.Round(sumOfAllProbabilities));
         }
 
         [TestMethod]
-        public void Probability_AllPossibleTrigrams_SumIsCloseToTwoForEachOne()
+        public void Probability_AllPossibleTrigrams_SumIsCloseToOneEachOne()
         {
-            ExampleBackOffModel exampleModel = new ExampleBackOffModel();
+            ExampleBackOffModelWithDiscounting exampleModel = new ExampleBackOffModelWithDiscounting();
             exampleModel.Train(_trainingSet.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries));
             List<string> vocabulary = new List<string>(exampleModel.Vocabulary);
 
@@ -72,21 +72,21 @@ I want you";
                         sumOfAllProbabilities += exampleModel.Probability(nGram);
                     }
 
-                    Assert.AreEqual(2, Math.Round(sumOfAllProbabilities));
+                    Assert.AreEqual(1, Math.Round(sumOfAllProbabilities));
                 }
             }
         }
 
         [TestMethod]
-        public void Probability_RandomSentencesFromVocabulary_ProbabilityGreaterThanOne()
+        public void Probability_RandomSentencesFromVocabulary_ProbabilityLessThanOne()
         {
-            ExampleBackOffModel exampleModel = new ExampleBackOffModel();
+            ExampleBackOffModelWithDiscounting exampleModel = new ExampleBackOffModelWithDiscounting();
             exampleModel.Train(_trainingSet.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries));
             List<string> vocabulary = new List<string>(exampleModel.Vocabulary);
 
             double sumProbabilities = 0;
             int i = 0;
-            foreach (string sentence in GetTestCorpus(vocabulary, 1000).Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string sentence in GetTestCorpus(vocabulary, int.MaxValue >> 11).Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
             {
                 sumProbabilities += exampleModel.Probability(sentence);
                 if (sumProbabilities > 1)
@@ -97,25 +97,26 @@ I want you";
                 i++;
             }
 
-            Assert.IsTrue(sumProbabilities > 1);
+            System.Diagnostics.Trace.TraceInformation("Sum is: {0}", sumProbabilities);
+            Assert.IsFalse(sumProbabilities > 1);
         }
 
         [TestMethod]
         public void TrainModel_RealCorpora_NoMemoryException()
         {
-            ExampleBackOffModel exampleModel = new ExampleBackOffModel();
+            ExampleBackOffModelWithDiscounting exampleModel = new ExampleBackOffModelWithDiscounting();
             using (StreamReader sr = new StreamReader("TestData\\brown.txt"))
             {
                 exampleModel.Train(GetLines(sr));
             }
 
-            exampleModel = new ExampleBackOffModel();
+            exampleModel = new ExampleBackOffModelWithDiscounting();
             using (StreamReader sr = new StreamReader("TestData\\gutenberg.txt"))
             {
                 exampleModel.Train(GetLines(sr));
             }
 
-            exampleModel = new ExampleBackOffModel();
+            exampleModel = new ExampleBackOffModelWithDiscounting();
             using (StreamReader sr = new StreamReader("TestData\\reuters.txt"))
             {
                 exampleModel.Train(GetLines(sr));
