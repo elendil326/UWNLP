@@ -46,6 +46,7 @@
     <Compile Include="ILanguageModel.cs" />
     <Compile Include="LanguageModelSettings.cs" />
     <Compile Include="LanguageModel.cs" />
+    <Compile Include="LinearInterpolationModel.cs" />
     <Compile Include="NGram.cs" />
     <Compile Include="NGramCounter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

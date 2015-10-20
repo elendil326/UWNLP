@@ -54,6 +54,8 @@
   <ItemGroup>
     <Compile Include="ExampleBackOffModelTests.cs" />
     <Compile Include="ExampleBackOffModelWithDiscountingTests.cs" />
+    <Compile Include="LanguageModelBaseTests.cs" />
+    <Compile Include="LinearInterpolationModelTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

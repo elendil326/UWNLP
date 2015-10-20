@@ -26,9 +26,12 @@ namespace UW.NLP.LanguageModels
 
         public Dictionary<int, double> BackOffBetaPerOrder { get; private set; }
 
+        public Dictionary<int, double> LineaInterpolationLambdaPerOrder { get; private set; }
+
         public LanguageModelSettings()
         {
             BackOffBetaPerOrder = new Dictionary<int, double>();
+            LineaInterpolationLambdaPerOrder = new Dictionary<int, double>();
         }
     }
 }

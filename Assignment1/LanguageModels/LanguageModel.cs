@@ -55,7 +55,7 @@ namespace UW.NLP.LanguageModels
                     currentNGram[j] = tokens[currentTokenIndex - currentNGram.NOrder + 1 + j];
                 }
 
-                sentenceProbability += Math.Log(Probability(currentNGram), 2);
+                sentenceProbability += Math.Log(Probability(currentNGram), Settings.LogBase);
             }
 
             return sentenceProbability;

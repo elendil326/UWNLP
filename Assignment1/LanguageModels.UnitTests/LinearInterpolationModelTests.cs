@@ -4,12 +4,12 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace UW.NLP.LanguageModels.UnitTests
 {
     [TestClass]
-    public class ExampleBackOffModelWithDiscountingTests
+    public class LinearInterpolationModelTests
     {
         [TestMethod]
         public void Probability_FixedBigramTogenerateAllPossibleTrigrams_SumIsCloseToOne()
         {
-            LanguageModelBaseTests<ExampleBackOffModelWithDiscounting>.Probability_FixedBigramTogenerateAllPossibleTrigrams
+            LanguageModelBaseTests<LinearInterpolationModel>.Probability_FixedBigramTogenerateAllPossibleTrigrams
                 (
                     (sumOfAllProbabilities) => Assert.AreEqual(1, Math.Round(sumOfAllProbabilities))
                 );
@@ -18,7 +18,7 @@ namespace UW.NLP.LanguageModels.UnitTests
         [TestMethod]
         public void Probability_AllPossibleTrigrams_SumIsCloseToOneEachOne()
         {
-            LanguageModelBaseTests<ExampleBackOffModelWithDiscounting>.Probability_AllPossibleTrigrams
+            LanguageModelBaseTests<LinearInterpolationModel>.Probability_AllPossibleTrigrams
                 (
                     (sumOfAllProbabilities) => Assert.AreEqual(1, Math.Round(sumOfAllProbabilities))
                 );
@@ -28,7 +28,7 @@ namespace UW.NLP.LanguageModels.UnitTests
         [TestCategory("Load")]
         public void Probability_RandomSentencesFromVocabulary_ProbabilityLessThanOne()
         {
-            LanguageModelBaseTests<ExampleBackOffModelWithDiscounting>.Probability_RandomSentencesFromVocabulary
+            LanguageModelBaseTests<LinearInterpolationModel>.Probability_RandomSentencesFromVocabulary
                 (
                     int.MaxValue >> 11,
                     (sumOfAllProbabilities) => Assert.IsFalse(sumOfAllProbabilities > 1)
@@ -39,7 +39,7 @@ namespace UW.NLP.LanguageModels.UnitTests
         [TestCategory("Load")]
         public void TrainModel_RealCorpora_NoMemoryException()
         {
-            LanguageModelBaseTests<ExampleBackOffModelWithDiscounting>.TrainModel_RealCorpora_NoMemoryException();
+            LanguageModelBaseTests<LinearInterpolationModel>.TrainModel_RealCorpora_NoMemoryException();
         }
     }
 }
