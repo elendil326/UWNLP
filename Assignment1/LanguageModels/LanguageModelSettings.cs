@@ -16,6 +16,16 @@ namespace UW.NLP.LanguageModels
 
         public string EndToken { get; set; }
 
+        public string UnkToken { get; set; }
+
+        public string UnkWordToken { get; set; }
+
+        public string UnkNumberToken { get; set; }
+
+        public string UnkAlphaNumericToken { get; set; }
+
+        public string UnkSymbolToken { get; set; }
+
         public string Separator { get; set; }
 
         public string PossibleEnd { get; set; }

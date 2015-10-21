@@ -16,11 +16,11 @@ namespace UW.NLP.LanguageModels.UnitTests
         }
 
         [TestMethod]
-        public void Probability_AllPossibleTrigrams_SumIsCloseToTwoForEachOne()
+        public void Probability_AllPossibleTrigrams_SumIsNotOne()
         {
             LanguageModelBaseTests<ExampleBackOffModel>.Probability_AllPossibleTrigrams
                 (
-                    (sumOfAllProbabilities) => Assert.AreEqual(2, Math.Round(sumOfAllProbabilities))
+                    (sumOfAllProbabilities) => Assert.AreNotEqual(1, Math.Round(sumOfAllProbabilities))
                 );
         }
 

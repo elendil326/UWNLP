@@ -24,6 +24,11 @@ namespace UW.NLP.LanguageModels
                 LogBase = 2,
                 StartToken = "{{*}}",
                 EndToken = "{{END}}",
+                UnkToken = "{{UNK}}",
+                UnkAlphaNumericToken = "{{UNK_APLHANUMERIC}}",
+                UnkNumberToken = "{{UNK_NUMBER}}",
+                UnkSymbolToken = "{{UNK_SYMBOL}}",
+                UnkWordToken = "{{UNK_WORD}}",
                 Separator = " ",
                 PossibleEnd = ".",
                 StringComparison = StringComparison.Ordinal,
@@ -72,6 +77,11 @@ namespace UW.NLP.LanguageModels
             for (int currentTokenIndex = Settings.NGramOrder - 1; currentTokenIndex < tokens.Count; currentTokenIndex++)
             {
                 NGram currentNGram = new NGram(Settings.NGramOrder, Settings.StringComparison);
+
+                // Replace Unkown words with corresponding UNK symbols
+                if (!Vocabulary.Contains(tokens[currentTokenIndex]))
+                    tokens[currentTokenIndex] = NGramCounter.GetUnkSymbol(tokens[currentTokenIndex]);
+
                 for (int j = 0; j < currentNGram.NOrder; j++)
                 {
                     currentNGram[j] = tokens[currentTokenIndex - currentNGram.NOrder + 1 + j];
@@ -121,7 +131,7 @@ namespace UW.NLP.LanguageModels
         private void Init()
         {
             Normalizer = new SentenceNormalizer(Settings.NGramOrder, Settings.StartToken, Settings.EndToken, Settings.Separator, Settings.PossibleEnd);
-            NGramCounter = new NGramCounter(Settings.NGramOrder, Settings.StringComparison, Settings.StringComparer);
+            NGramCounter = new NGramCounter(Settings);
         }
     }
 }

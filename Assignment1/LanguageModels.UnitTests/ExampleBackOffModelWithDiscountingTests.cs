@@ -30,7 +30,7 @@ namespace UW.NLP.LanguageModels.UnitTests
         {
             LanguageModelBaseTests<ExampleBackOffModelWithDiscounting>.Probability_RandomSentencesFromVocabulary
                 (
-                    int.MaxValue >> 11,
+                    int.MaxValue >> 12,
                     (sumOfAllProbabilities) => Assert.IsFalse(sumOfAllProbabilities > 1)
                 );
         }

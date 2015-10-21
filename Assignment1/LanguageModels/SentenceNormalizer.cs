@@ -6,7 +6,7 @@ namespace UW.NLP.LanguageModels
 {
     public class SentenceNormalizer
     {
-        public int N { get; private set; }
+        public int NOrder { get; private set; }
 
         public string StartToken { get; private set; }
 
@@ -24,7 +24,7 @@ namespace UW.NLP.LanguageModels
             if (string.IsNullOrEmpty(separator)) throw new ArgumentNullException("separator");
             if (string.IsNullOrEmpty(possibleEndToken)) throw new ArgumentNullException("possibleEndToken");
 
-            N = n;
+            NOrder = n;
             StartToken = startToken;
             EndToken = endToken;
             Separator = separator;
@@ -53,12 +53,12 @@ namespace UW.NLP.LanguageModels
 
         private int GetNormalizedLength(int originalLength)
         {
-            return originalLength + ((N - 1) * (StartToken.Length + Separator.Length)) + Separator.Length + EndToken.Length;
+            return originalLength + ((NOrder - 1) * (StartToken.Length + Separator.Length)) + Separator.Length + EndToken.Length;
         }
 
         private StringBuilder AddStartTokens(StringBuilder normalizedSentence)
         {
-            for (int i = 0; i < N - 1; i++)
+            for (int i = 0; i < NOrder - 1; i++)
             {
                 normalizedSentence.Insert(0, Separator);
                 normalizedSentence.Insert(0, StartToken);

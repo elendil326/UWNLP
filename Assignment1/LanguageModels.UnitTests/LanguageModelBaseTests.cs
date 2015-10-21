@@ -135,7 +135,7 @@ I want you";
 
             for (int i = 0; i < sentences; i++)
             {
-                string sentence = GetRandomSentence(r, vocabulary);
+                string sentence = GetRandomSentence(r, vocabulary, uniqueSentences);
                 if (!uniqueSentences.Contains(sentence))
                 {
                     sb.AppendLine(sentence);
@@ -150,7 +150,7 @@ I want you";
             return sb.ToString();
         }
 
-        private static string GetRandomSentence(Random r, List<string> vocabulary)
+        private static string GetRandomSentence(Random r, List<string> vocabulary, HashSet<string> uniqueSentences)
         {
             StringBuilder sb = new StringBuilder();
 
@@ -159,6 +159,9 @@ I want you";
                 int i = r.Next(0, vocabulary.Count);
                 if (vocabulary[i] == _settings.EndToken)
                 {
+                    if (uniqueSentences.Contains(sb.ToString()))
+                        continue;
+
                     break;
                 }
                 sb.Append(vocabulary[i]);
