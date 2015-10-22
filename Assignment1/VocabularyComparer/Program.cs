@@ -5,6 +5,10 @@ using UW.NLP.LanguageModels;
 
 namespace VocabularyComparer
 {
+    /// <summary>
+    /// This programs compares two different sections of the same corpora to verify the percentage of unks between train and validation.
+    /// I used to know how to manage UNKs, but then I realized doing 100% of words seen for the first time treated as UNKs worked better.
+    /// </summary>
     class Program
     {
         static void Main(string[] args)

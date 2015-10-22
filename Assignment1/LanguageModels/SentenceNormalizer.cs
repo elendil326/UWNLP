@@ -4,6 +4,9 @@ using System.Text;
 
 namespace UW.NLP.LanguageModels
 {
+    /// <summary>
+    /// Normalizes the sentences of the corpus to be ready for the NGramCounter to consume.
+    /// </summary>
     public class SentenceNormalizer
     {
         public int NOrder { get; private set; }

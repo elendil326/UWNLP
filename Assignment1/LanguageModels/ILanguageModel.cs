@@ -2,6 +2,9 @@
 
 namespace UW.NLP.LanguageModels
 {
+    /// <summary>
+    /// Represents the interface of a Language Model
+    /// </summary>
     public interface ILanguageModel
     {
         HashSet<string> Vocabulary { get; }

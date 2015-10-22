@@ -1,9 +1,13 @@
-﻿using System;
-
-namespace UW.NLP.LanguageModels
+﻿namespace UW.NLP.LanguageModels
 {
+    /// <summary>
+    /// The implementation of a Linear Interpolation language model.
+    /// </summary>
     public class LinearInterpolationModel : LanguageModel
     {
+        /// <summary>
+        /// Creates a new instance of the class with default values.
+        /// </summary>
         public LinearInterpolationModel()
             : base()
         {
@@ -16,6 +20,11 @@ namespace UW.NLP.LanguageModels
             : base(settings)
         { }
 
+        /// <summary>
+        /// Gets the probability of an Ngram.
+        /// </summary>
+        /// <param name="nGram">The NGram to calculate.</param>
+        /// <returns>The probability of the NGram.</returns>
         public override double Probability(NGram nGram)
         {
             double probabilty = 0;
@@ -28,6 +37,8 @@ namespace UW.NLP.LanguageModels
                     n_IGram[j] = nGram[j + i];
                 }
                 double pml = GetPML(n_IGram);
+
+                // If is Infinity or undefined, take it as zero.
                 probabilty += double.IsInfinity(pml) || double.IsNaN(pml)
                     ? 0
                     : Settings.LinearInterpolationLambdaPerOrder[i + 1] * pml;

@@ -42,8 +42,8 @@ namespace UW.NLP.LanguageModelValidator
 
                         languageModel.ClearCacheForDifferentSettings();
                         PerplexityCalculator calculator = new PerplexityCalculator(languageModel);
-
-                        double perplexity = calculator.GetPerplexity(corpus);
+                        int unkWords = 0;
+                        double perplexity = calculator.GetPerplexity(corpus, out unkWords);
                         if (!perplexityResults.ContainsKey(perplexity))
                         {
                             perplexityResults[perplexity] = new List<DoubleCombination>();

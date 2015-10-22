@@ -3,6 +3,9 @@ using System.Text;
 
 namespace UW.NLP.LanguageModels
 {
+    /// <summary>
+    /// Represents an NGram, a dynamic class with zero or more strings.
+    /// </summary>
     public class NGram : IEquatable<NGram>
     {
         private string[] _tokens;
