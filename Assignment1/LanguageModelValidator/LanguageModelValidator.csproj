@@ -7,7 +7,7 @@
     <ProjectGuid>{E16EFB7E-90C3-4468-A52A-DFEB1E536C51}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>LanguageModelValidator</RootNamespace>
+    <RootNamespace>UW.NLP.LanguageModelValidator</RootNamespace>
     <AssemblyName>LanguageModelValidator</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -43,6 +43,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ArgumentParser.cs" />
+    <Compile Include="DoubleCombination.cs" />
+    <Compile Include="Optimizer.cs" />
+    <Compile Include="PerplexityCalculator.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

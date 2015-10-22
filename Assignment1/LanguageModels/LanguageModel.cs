@@ -8,11 +8,11 @@ namespace UW.NLP.LanguageModels
 {
     public abstract class LanguageModel : ILanguageModel
     {
-        internal LanguageModelSettings Settings { get; set; }
-
         internal SentenceNormalizer Normalizer { get; private set; }
 
         internal NGramCounter NGramCounter { get; private set; }
+
+        public LanguageModelSettings Settings { get; set; }
 
         public HashSet<string> Vocabulary { get { return NGramCounter.Vocabulary; } }
 
