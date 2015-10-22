@@ -15,7 +15,7 @@ namespace UW.NLP.LanguageModelValidator
             Dictionary<double, List<DoubleCombination>> perplexityResults = new Dictionary<double, List<DoubleCombination>>();
             Dictionary<int, double> orderValues = languageModel is ExampleBackOffModelWithDiscounting
                                                 ? languageModel.Settings.BackOffBetaPerOrder
-                                                : languageModel.Settings.LineaInterpolationLambdaPerOrder;
+                                                : languageModel.Settings.LinearInterpolationLambdaPerOrder;
 
             for (int i = 1; i < rangeOfTrial; i++)
             {
@@ -31,6 +31,15 @@ namespace UW.NLP.LanguageModelValidator
                     for (int k = 1; k < rangeOfTrial; k++)
                     {
                         orderValues[j] = k / (double)rangeOfTrial;
+                        double sumValues = 0;
+                        for (int l = 1; l < languageModel.Settings.NGramOrder + 1; l++)
+                        {
+                            sumValues += orderValues[l];
+                        }
+
+                        if (sumValues != 1)
+                            continue;
+
                         languageModel.ClearCacheForDifferentSettings();
                         PerplexityCalculator calculator = new PerplexityCalculator(languageModel);
 

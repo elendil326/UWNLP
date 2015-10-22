@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Diagnostics;
 
 namespace UW.NLP.LanguageModels.UnitTests
 {
@@ -35,7 +36,9 @@ I want you";
             foreach (string word in model.Vocabulary)
             {
                 testTrigram[2] = word;
-                sumOfAllProbabilities += model.Probability(testTrigram);
+                double probability = model.Probability(testTrigram);
+                Trace.TraceInformation("{0} {1}", testTrigram, probability);
+                sumOfAllProbabilities += probability;
             }
 
             assert(Math.Round(sumOfAllProbabilities));

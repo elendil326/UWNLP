@@ -15,13 +15,7 @@ namespace UW.NLP.LanguageModels
 
         public string UnkToken { get; set; }
 
-        public string UnkWordToken { get; set; }
-
-        public string UnkNumberToken { get; set; }
-
-        public string UnkAlphaNumericToken { get; set; }
-
-        public string UnkSymbolToken { get; set; }
+        public double UnkPercentage { get; set; }
 
         public string Separator { get; set; }
 
@@ -33,12 +27,12 @@ namespace UW.NLP.LanguageModels
 
         public Dictionary<int, double> BackOffBetaPerOrder { get; private set; }
 
-        public Dictionary<int, double> LineaInterpolationLambdaPerOrder { get; private set; }
+        public Dictionary<int, double> LinearInterpolationLambdaPerOrder { get; private set; }
 
         public LanguageModelSettings()
         {
             BackOffBetaPerOrder = new Dictionary<int, double>();
-            LineaInterpolationLambdaPerOrder = new Dictionary<int, double>();
+            LinearInterpolationLambdaPerOrder = new Dictionary<int, double>();
         }
     }
 }

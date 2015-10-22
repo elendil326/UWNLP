@@ -16,16 +16,17 @@ namespace UW.NLP.LanguageModelValidator
         public double GetPerplexity(IEnumerable<string> corpus)
         {
             if (corpus == null) throw new ArgumentNullException("corpus");
-
-            int numberOfSentences = 0;
+            
             double sumOfProbabilities = 0;
+            int totalWords = 0;
             foreach (string sentence in corpus)
             {
-                numberOfSentences++;
-                sumOfProbabilities += _languageModel.ProbabilityInLogSpace(sentence);
+                int wordsInSentence;
+                sumOfProbabilities += _languageModel.ProbabilityInLogSpace(sentence, out wordsInSentence);
+                totalWords += wordsInSentence;
             }
 
-            return Math.Pow(_languageModel.Settings.LogBase, (sumOfProbabilities / numberOfSentences) * -1);
+            return Math.Pow(_languageModel.Settings.LogBase, (sumOfProbabilities / totalWords) * -1);
         }
     }
 }

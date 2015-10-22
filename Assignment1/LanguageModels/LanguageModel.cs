@@ -6,6 +6,8 @@ namespace UW.NLP.LanguageModels
 {
     public abstract class LanguageModel : ILanguageModel
     {
+        private HashSet<string> _wordsSeenOnlyOnce;
+
         internal SentenceNormalizer Normalizer { get; private set; }
 
         internal NGramCounter NGramCounter { get; private set; }
@@ -14,7 +16,9 @@ namespace UW.NLP.LanguageModels
 
         public LanguageModelSettings Settings { get; set; }
 
-        public HashSet<string> Vocabulary { get { return NGramCounter.Vocabulary; } }
+        public HashSet<string> Vocabulary { get; private set; }
+
+        public int TotalWords { get; private set; }
 
         public LanguageModel()
         {
@@ -25,10 +29,7 @@ namespace UW.NLP.LanguageModels
                 StartToken = "{{*}}",
                 EndToken = "{{END}}",
                 UnkToken = "{{UNK}}",
-                UnkAlphaNumericToken = "{{UNK_APLHANUMERIC}}",
-                UnkNumberToken = "{{UNK_NUMBER}}",
-                UnkSymbolToken = "{{UNK_SYMBOL}}",
-                UnkWordToken = "{{UNK_WORD}}",
+                UnkPercentage = 100,
                 Separator = " ",
                 PossibleEnd = ".",
                 StringComparison = StringComparison.Ordinal,
@@ -44,10 +45,11 @@ namespace UW.NLP.LanguageModels
             Init();
         }
 
-        public virtual double ProbabilityInLogSpace(string sentence)
+        public virtual double ProbabilityInLogSpace(string sentence, out int totalWords)
         {
             if (sentence == null) throw new ArgumentNullException("sentence");
 
+            totalWords = 0;
             string normalizedSentence = Normalizer.Normalize(sentence);
             List<string> tokens = Normalizer.Tokenize(normalizedSentence).ToList();
             double sentenceProbability = 0;
@@ -58,12 +60,13 @@ namespace UW.NLP.LanguageModels
 
                 // Replace Unkown words with corresponding UNK symbols
                 if (!Vocabulary.Contains(tokens[currentTokenIndex]))
-                    tokens[currentTokenIndex] = NGramCounter.GetUnkSymbol(tokens[currentTokenIndex]);
+                    tokens[currentTokenIndex] = Settings.UnkToken;
 
                 for (int j = 0; j < currentNGram.NOrder; j++)
                 {
                     currentNGram[j] = tokens[currentTokenIndex - currentNGram.NOrder + 1 + j];
                 }
+                totalWords++;
 
                 sentenceProbability += Math.Log(Probability(currentNGram), Settings.LogBase);
             }
@@ -85,7 +88,7 @@ namespace UW.NLP.LanguageModels
 
                 // Replace Unkown words with corresponding UNK symbols
                 if (!Vocabulary.Contains(tokens[currentTokenIndex]))
-                    tokens[currentTokenIndex] = NGramCounter.GetUnkSymbol(tokens[currentTokenIndex]);
+                    tokens[currentTokenIndex] = Settings.UnkToken;
 
                 for (int j = 0; j < currentNGram.NOrder; j++)
                 {
@@ -104,11 +107,47 @@ namespace UW.NLP.LanguageModels
         {
             if (sentences == null) throw new ArgumentNullException("sentences");
 
+            List<List<string>> corpus = new List<List<string>>();
             foreach (string sentence in sentences)
             {
                 string normalizedSentence = Normalizer.Normalize(sentence);
                 List<string> tokens = Normalizer.Tokenize(normalizedSentence).ToList();
-                NGramCounter.PopulateNGramCounts(tokens);
+                for (int i = 0; i < tokens.Count; i++)
+                {
+                    TotalWords++;
+                    Vocabulary.Add(tokens[i]);
+                    if (_wordsSeenOnlyOnce.Contains(tokens[i]))
+                    {
+                        _wordsSeenOnlyOnce.Remove(tokens[i]);
+                    }
+                    else
+                    {
+                        _wordsSeenOnlyOnce.Add(tokens[i]);
+                    }
+                }
+                corpus.Add(tokens);
+            }
+
+            // Remove start from vocabulary
+            Vocabulary.Remove(Settings.StartToken);
+
+            int wordsToMakeUnkown = (int)Math.Round((Settings.UnkPercentage / 100) * _wordsSeenOnlyOnce.Count);
+            foreach (List<string> sentence in corpus)
+            {
+                for (int i = 0; i < sentence.Count; i++)
+                {
+                    if (wordsToMakeUnkown <= 0)
+                        break;
+
+                    if (_wordsSeenOnlyOnce.Contains(sentence[i]))
+                    {
+                        Vocabulary.Remove(sentence[i]);
+                        sentence[i] = Settings.UnkToken;
+                        wordsToMakeUnkown--;
+                    }
+                }
+
+                NGramCounter.PopulateNGramCounts(sentence);
             }
         }
 
@@ -128,7 +167,7 @@ namespace UW.NLP.LanguageModels
             double denominator = 0;
             if (nGram.NOrder == 1)
             {
-                denominator = NGramCounter.TotalWords;
+                denominator = TotalWords;
             }
             else
             {
@@ -148,6 +187,8 @@ namespace UW.NLP.LanguageModels
         {
             Normalizer = new SentenceNormalizer(Settings.NGramOrder, Settings.StartToken, Settings.EndToken, Settings.Separator, Settings.PossibleEnd);
             NGramCounter = new NGramCounter(Settings);
+            Vocabulary = new HashSet<string>(Settings.StringComparer);
+            _wordsSeenOnlyOnce = new HashSet<string>(Settings.StringComparer);
             PMLCache = new Dictionary<NGram, double>();
         }
     }

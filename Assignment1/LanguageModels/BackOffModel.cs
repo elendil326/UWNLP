@@ -96,7 +96,7 @@ namespace UW.NLP.LanguageModels
             double denominator = 0;
             if (nGram.NOrder == 1)
             {
-                denominator = NGramCounter.TotalWords;
+                denominator = TotalWords;
             }
             else
             {

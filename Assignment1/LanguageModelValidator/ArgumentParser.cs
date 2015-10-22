@@ -19,7 +19,7 @@ namespace UW.NLP.LanguageModelValidator
 
         public static bool Optimize { get; private set; }
 
-        public static double OptimzeValue { get; private set; }
+        public static int OptimzeValue { get; private set; }
 
         public static void Parse(string[] args)
         {
@@ -67,7 +67,7 @@ namespace UW.NLP.LanguageModelValidator
                 if (string.Equals(args[5], "Optimize", StringComparison.OrdinalIgnoreCase))
                 {
                     Optimize = true;
-                    OptimzeValue = 1000;
+                    OptimzeValue = int.Parse(args[6]);
                 }
             }
         }

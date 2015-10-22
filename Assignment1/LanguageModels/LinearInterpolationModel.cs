@@ -7,9 +7,9 @@ namespace UW.NLP.LanguageModels
         public LinearInterpolationModel()
             : base()
         {
-            Settings.LineaInterpolationLambdaPerOrder[1] = 0.30;
-            Settings.LineaInterpolationLambdaPerOrder[2] = 0.20;
-            Settings.LineaInterpolationLambdaPerOrder[3] = 0.50;
+            Settings.LinearInterpolationLambdaPerOrder[1] = 0.30;
+            Settings.LinearInterpolationLambdaPerOrder[2] = 0.20;
+            Settings.LinearInterpolationLambdaPerOrder[3] = 0.50;
         }
 
         public LinearInterpolationModel(LanguageModelSettings settings)
@@ -30,15 +30,13 @@ namespace UW.NLP.LanguageModels
                 double pml = GetPML(n_IGram);
                 probabilty += double.IsInfinity(pml) || double.IsNaN(pml)
                     ? 0
-                    : Settings.LineaInterpolationLambdaPerOrder[i + 1] * pml;
+                    : Settings.LinearInterpolationLambdaPerOrder[i + 1] * pml;
             }
 
             return probabilty;
         }
 
         public override void ClearCacheForDifferentSettings()
-        {
-            throw new NotSupportedException();
-        }
+        { }
     }
 }
