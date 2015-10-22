@@ -17,6 +17,10 @@ namespace UW.NLP.LanguageModelValidator
 
         public static bool ShowedUsage { get; private set; }
 
+        public static bool Optimize { get; private set; }
+
+        public static double OptimzeValue { get; private set; }
+
         public static void Parse(string[] args)
         {
             if (args == null) throw new ArgumentNullException("args");
@@ -56,6 +60,16 @@ namespace UW.NLP.LanguageModelValidator
                 TestPercentage = 10;
             }
 
+            if (args.Length > 6)
+            {
+                if (args.Length < 7)
+                    ShowUsage();
+                if (string.Equals(args[5], "Optimize", StringComparison.OrdinalIgnoreCase))
+                {
+                    Optimize = true;
+                    OptimzeValue = 1000;
+                }
+            }
         }
 
         public static void ShowUsage()
@@ -64,14 +78,16 @@ namespace UW.NLP.LanguageModelValidator
             Console.WriteLine();
             Console.WriteLine("Usages:");
             Console.WriteLine();
-            Console.WriteLine("LanguageModelValidator.exe <CorpusPath> <LanguageModel> ( <training percent> <validate percent> <test percent> )");
+            Console.WriteLine(@"LanguageModelValidator.exe <CorpusPath> <LanguageModel> 
+\t( <training percent> <validate percent> <test percent> Optimze <Optimizevalue>)");
             Console.WriteLine();
             Console.WriteLine("/tLanguageModel:\tBackoff, LinearInterpolation");
             Console.WriteLine("/ttraining,validate,test percent:\tThe percent of the corporus to use for each propose. Default as 80% 10% 10%");
+            Console.WriteLine("/tOptimizeValue:\tThe value of decimals to brute force an optimal combination.");
             Console.WriteLine();
             Console.WriteLine("Example");
             Console.WriteLine();
-            Console.WriteLine("LanguageModelValidator.exe LinearInterpolation 80 10 10");
+            Console.WriteLine("LanguageModelValidator.exe LinearInterpolation 80 10 10 Optimize 1000");
             ShowedUsage = true;
         }
     }

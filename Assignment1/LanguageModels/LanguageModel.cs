@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace UW.NLP.LanguageModels
 {
@@ -11,6 +9,8 @@ namespace UW.NLP.LanguageModels
         internal SentenceNormalizer Normalizer { get; private set; }
 
         internal NGramCounter NGramCounter { get; private set; }
+
+        internal Dictionary<NGram, double> PMLCache { get; private set; }
 
         public LanguageModelSettings Settings { get; set; }
 
@@ -55,6 +55,11 @@ namespace UW.NLP.LanguageModels
             for (int currentTokenIndex = Settings.NGramOrder - 1; currentTokenIndex < tokens.Count; currentTokenIndex++)
             {
                 NGram currentNGram = new NGram(Settings.NGramOrder, Settings.StringComparison);
+
+                // Replace Unkown words with corresponding UNK symbols
+                if (!Vocabulary.Contains(tokens[currentTokenIndex]))
+                    tokens[currentTokenIndex] = NGramCounter.GetUnkSymbol(tokens[currentTokenIndex]);
+
                 for (int j = 0; j < currentNGram.NOrder; j++)
                 {
                     currentNGram[j] = tokens[currentTokenIndex - currentNGram.NOrder + 1 + j];
@@ -107,8 +112,18 @@ namespace UW.NLP.LanguageModels
             }
         }
 
+        public abstract void ClearCacheForDifferentSettings();
+
+        public virtual void ClearCache()
+        {
+            PMLCache = new Dictionary<NGram, double>();
+        }
+
         internal double GetPML(NGram nGram)
         {
+            if (PMLCache.ContainsKey(nGram))
+                return PMLCache[nGram];
+
             double numerator = NGramCounter.GetNGramCount(nGram);
             double denominator = 0;
             if (nGram.NOrder == 1)
@@ -125,13 +140,15 @@ namespace UW.NLP.LanguageModels
                 denominator = NGramCounter.GetNGramCount(N_1gram);
             }
 
-            return numerator / denominator;
+            PMLCache[nGram] = numerator / denominator;
+            return PMLCache[nGram];
         }
 
         private void Init()
         {
             Normalizer = new SentenceNormalizer(Settings.NGramOrder, Settings.StartToken, Settings.EndToken, Settings.Separator, Settings.PossibleEnd);
             NGramCounter = new NGramCounter(Settings);
+            PMLCache = new Dictionary<NGram, double>();
         }
     }
 }

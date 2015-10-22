@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace UW.NLP.LanguageModels
 {
@@ -19,7 +15,7 @@ namespace UW.NLP.LanguageModels
         public override double Probability(NGram nGram)
         {
             Func<NGram, double> probabilityFunction;
-            if (nGram.NOrder == 1)
+            if (nGram.NOrder == 2)
             {
                 probabilityFunction = GetPML;
             }
@@ -37,6 +33,9 @@ namespace UW.NLP.LanguageModels
 
         private double GetP2(NGram nGram, Func<NGram, double> probabilityFunction)
         {
+            if (UnexistentNGramCache.ContainsKey(nGram))
+                return UnexistentNGramCache[nGram];
+
             NGram firstN_1Gram = new NGram(nGram.NOrder - 1, Settings.StringComparison);
             for (int i = 0; i < firstN_1Gram.NOrder; i++)
             {
@@ -55,14 +54,15 @@ namespace UW.NLP.LanguageModels
                 possibleLastN_1Gram[i] = lastN_1Gram[i];
             }
 
-            double denominator = 0;
-            foreach (string word in GetListOfWordsForInexistentNGram(firstN_1Gram))
+            double denominator = 1;
+            foreach (string word in GetListOfWordsForExistentNGram(firstN_1Gram))
             {
                 possibleLastN_1Gram[possibleLastN_1Gram.NOrder - 1] = word;
-                denominator += probabilityFunction(possibleLastN_1Gram);
+                denominator -= probabilityFunction(possibleLastN_1Gram);
             }
 
-            return Alpha(firstN_1Gram) * (probabilityFunction(lastN_1Gram) / denominator);
+            UnexistentNGramCache[nGram] = Alpha(firstN_1Gram) * (probabilityFunction(lastN_1Gram) / denominator);
+            return UnexistentNGramCache[nGram];
         }
     }
 }

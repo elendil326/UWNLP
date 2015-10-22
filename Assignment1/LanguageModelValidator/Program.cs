@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using UW.NLP.LanguageModels;
 
 namespace UW.NLP.LanguageModelValidator
 {
@@ -12,19 +11,33 @@ namespace UW.NLP.LanguageModelValidator
             ArgumentParser.Parse(args);
             if (ArgumentParser.ShowedUsage) return;
 
+            Console.WriteLine("Corpus path: {0}", ArgumentParser.CorpusPath);
+            Console.WriteLine();
+
             Console.WriteLine("Splitting corpus.");
             List<List<string>> splitCorpus = SplitCorpus(ArgumentParser.CorpusPath, ArgumentParser.TrainingPercentage, ArgumentParser.ValidatePercentage, ArgumentParser.TestPercentage);
+            Console.WriteLine("Splitted corpus as follow:");
+            Console.WriteLine("Training: {0}", splitCorpus[0].Count);
+            Console.WriteLine("Validate: {0}", splitCorpus[1].Count);
+            Console.WriteLine("Test: {0}", splitCorpus[2].Count);
 
-            Console.WriteLine("Training model at with {0}% of corpus.", ArgumentParser.TrainingPercentage);
+            Console.WriteLine("Training model.", ArgumentParser.TrainingPercentage);
             ArgumentParser.LanguageModel.Train(splitCorpus[0]);
 
-            Console.WriteLine("Running optimizer with validation ({0}% of corpus)", ArgumentParser.ValidatePercentage);
-            List<DoubleCombination> optimumCombinations = Optimizer.GetOptimumCombination(1000, ArgumentParser.LanguageModel, splitCorpus[1]);
+            Console.WriteLine("Calculate Perplextiy with validate set.");
+            PerplexityCalculator perplexityCalculator = new PerplexityCalculator(ArgumentParser.LanguageModel);
+            double perplexity = perplexityCalculator.GetPerplexity(splitCorpus[1]);
 
-            Console.WriteLine("These are the optimum combinations:");
-            foreach (DoubleCombination combination in optimumCombinations)
+            if (ArgumentParser.Optimize)
             {
-                Console.WriteLine(combination.ToString());
+                Console.WriteLine("Running optimizer with validation set.", ArgumentParser.ValidatePercentage);
+                List<DoubleCombination> optimumCombinations = Optimizer.GetOptimumCombination(1000, ArgumentParser.LanguageModel, splitCorpus[1]);
+
+                Console.WriteLine("These are the optimum combinations:");
+                foreach (DoubleCombination combination in optimumCombinations)
+                {
+                    Console.WriteLine(combination.ToString());
+                }
             }
         }
 

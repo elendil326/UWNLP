@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace UW.NLP.LanguageModels
 {
@@ -38,6 +34,11 @@ namespace UW.NLP.LanguageModels
             }
 
             return probabilty;
+        }
+
+        public override void ClearCacheForDifferentSettings()
+        {
+            throw new NotSupportedException();
         }
     }
 }

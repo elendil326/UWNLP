@@ -1,7 +1,7 @@
-﻿using UW.NLP.LanguageModels;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using UW.NLP.LanguageModels;
 
 namespace UW.NLP.LanguageModelValidator
 {
@@ -24,13 +24,14 @@ namespace UW.NLP.LanguageModelValidator
                     // Initialize round
                     for (int k = 1; k < languageModel.Settings.NGramOrder + 1; k++)
                     {
-                        orderValues[k] = i / rangeOfTrial;
+                        orderValues[k] = i / (double)rangeOfTrial;
                     }
 
                     // Set each of the values to try
                     for (int k = 1; k < rangeOfTrial; k++)
                     {
-                        orderValues[j] = k / rangeOfTrial;
+                        orderValues[j] = k / (double)rangeOfTrial;
+                        languageModel.ClearCacheForDifferentSettings();
                         PerplexityCalculator calculator = new PerplexityCalculator(languageModel);
 
                         double perplexity = calculator.GetPerplexity(corpus);
@@ -49,7 +50,7 @@ namespace UW.NLP.LanguageModelValidator
                 }
             }
 
-            return perplexityResults[perplexityResults.Keys.Max()];
+            return perplexityResults[perplexityResults.Keys.Min()];
         }
     }
 }
