@@ -26,6 +26,7 @@ public class IOUtils {
     }
     if (root.isDirectory()) {
       File[] children = root.listFiles();
+      assert children != null;
       for (int i = 0; i < children.length; i++) {
         File child = children[i];
         addFilesUnder(child, files, fileFilter);

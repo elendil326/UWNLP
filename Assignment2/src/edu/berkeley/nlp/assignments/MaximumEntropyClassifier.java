@@ -31,9 +31,9 @@ public class MaximumEntropyClassifier <I,F,L> implements ProbabilisticClassifier
    */
   public static class Factory <I,F,L> implements ProbabilisticClassifierFactory<I,L> {
 
-    double sigma;
-    int iterations;
-    FeatureExtractor<I, F> featureExtractor;
+    final double sigma;
+    final int iterations;
+    final FeatureExtractor<I, F> featureExtractor;
 
     public ProbabilisticClassifier<I, L> trainClassifier(List<LabeledInstance<I, L>> trainingData) {
       // build data encodings so the inner loops can be efficient
@@ -105,11 +105,11 @@ public class MaximumEntropyClassifier <I,F,L> implements ProbabilisticClassifier
    * objective we normally think of.
    */
   public static class ObjectiveFunction <F,L> implements DifferentiableFunction {
-    IndexLinearizer indexLinearizer;
-    Encoding<F, L> encoding;
-    EncodedDatum[] data;
+    final IndexLinearizer indexLinearizer;
+    final Encoding<F, L> encoding;
+    final EncodedDatum[] data;
 
-    double sigma;
+    final double sigma;
 
     double lastValue;
     double[] lastDerivative;
@@ -153,7 +153,7 @@ public class MaximumEntropyClassifier <I,F,L> implements ProbabilisticClassifier
      * wrt each weight parameter.
      */
     private Pair<Double, double[]> calculate(double[] x) {
-      double objective = 0.0;
+      double objective;
       double[] derivatives = DoubleArrays.constantArray(0.0, dimension());
       // TODO: compute the objective and its derivatives
       // TODO
@@ -210,8 +210,7 @@ public class MaximumEntropyClassifier <I,F,L> implements ProbabilisticClassifier
         featureCounts[i] = count;
         i++;
       }
-      EncodedDatum encodedDatum = new EncodedDatum(-1, featureIndexes, featureCounts);
-      return encodedDatum;
+      return new EncodedDatum(-1, featureIndexes, featureCounts);
     }
 
     public static <F,L> EncodedDatum encodeLabeledDatum(LabeledFeatureVector<F, L> labeledDatum, Encoding<F, L> encoding) {
@@ -221,8 +220,8 @@ public class MaximumEntropyClassifier <I,F,L> implements ProbabilisticClassifier
     }
 
     int labelIndex;
-    int[] featureIndexes;
-    double[] featureCounts;
+    final int[] featureIndexes;
+    final double[] featureCounts;
 
     public int getLabelIndex() {
       return labelIndex;
@@ -255,8 +254,8 @@ public class MaximumEntropyClassifier <I,F,L> implements ProbabilisticClassifier
    * functions.
    */
   public static class Encoding <F,L> {
-    Indexer<F> featureIndexer;
-    Indexer<L> labelIndexer;
+    final Indexer<F> featureIndexer;
+    final Indexer<L> labelIndexer;
 
     public int getNumFeatures() {
       return featureIndexer.size();
@@ -295,8 +294,8 @@ public class MaximumEntropyClassifier <I,F,L> implements ProbabilisticClassifier
    * to a single pairIndex, use getLinearIndex().
    */
   public static class IndexLinearizer {
-    int numFeatures;
-    int numLabels;
+    final int numFeatures;
+    final int numLabels;
 
     public int getNumLinearIndexes() {
       return numFeatures * numLabels;
@@ -321,10 +320,10 @@ public class MaximumEntropyClassifier <I,F,L> implements ProbabilisticClassifier
   }
 
 
-  private double[] weights;
-  private Encoding<F,L> encoding;
-  private IndexLinearizer indexLinearizer;
-  private FeatureExtractor<I,F> featureExtractor;
+  private final double[] weights;
+  private final Encoding<F,L> encoding;
+  private final IndexLinearizer indexLinearizer;
+  private final FeatureExtractor<I,F> featureExtractor;
 
   /**
    * Calculate the log probabilities of each class, for the given datum (feature bundle).  Note that the weighted votes

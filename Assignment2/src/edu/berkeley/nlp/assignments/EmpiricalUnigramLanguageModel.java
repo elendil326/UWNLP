@@ -18,7 +18,7 @@ class EmpiricalUnigramLanguageModel implements LanguageModel {
   static final String STOP = "</S>";
 
   double total = 0.0;
-  Counter<String> wordCounter = new Counter<String>();
+  final Counter<String> wordCounter = new Counter<String>();
 
   public double getWordProbability(List<String> sentence, int index) {
     String word = sentence.get(index);

@@ -114,6 +114,7 @@ public class FastPriorityQueue <E> implements PriorityQueue<E>, Serializable {
     size--;
     elements[size] = null;
     heapifyDown(0);
+    //noinspection unchecked
     return (E) element;
   }
 
@@ -121,7 +122,7 @@ public class FastPriorityQueue <E> implements PriorityQueue<E>, Serializable {
    * Returns true if the priority queue is non-empty
    */
   public boolean hasNext() {
-    return !isEmpty();
+    return isNotEmpty();
   }
 
   /**
@@ -143,6 +144,7 @@ public class FastPriorityQueue <E> implements PriorityQueue<E>, Serializable {
    */
   public E getFirst() {
     if (size < 1) throw new NoSuchElementException();
+    //noinspection unchecked
     return (E) elements[0];
   }
 
@@ -165,8 +167,8 @@ public class FastPriorityQueue <E> implements PriorityQueue<E>, Serializable {
   /**
    * True if the queue is empty (size == 0).
    */
-  public boolean isEmpty() {
-    return size == 0;
+  public boolean isNotEmpty() {
+    return size != 0;
   }
 
   /**
@@ -202,7 +204,7 @@ public class FastPriorityQueue <E> implements PriorityQueue<E>, Serializable {
     PriorityQueue<E> pq = deepCopy();
     StringBuilder sb = new StringBuilder("[");
     int numKeysPrinted = 0;
-    while (numKeysPrinted < maxKeysToPrint && ! pq.isEmpty()) {
+    while (numKeysPrinted < maxKeysToPrint && pq.isNotEmpty()) {
       double priority = pq.getPriority();
       E element = pq.removeFirst();
       sb.append(element.toString());
@@ -229,7 +231,7 @@ public class FastPriorityQueue <E> implements PriorityQueue<E>, Serializable {
   public Counter asCounter() {
     PriorityQueue<E> pq = deepCopy();
     Counter<E> counter = new Counter<E>();
-    while (! pq.isEmpty()) {
+    while (pq.isNotEmpty()) {
       double priority = pq.getPriority();
       E element = pq.removeFirst();
       counter.incrementCount(element, priority);

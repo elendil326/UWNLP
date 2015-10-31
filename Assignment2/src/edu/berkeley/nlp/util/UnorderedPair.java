@@ -5,8 +5,8 @@ package edu.berkeley.nlp.util;
  * @author Dan Klein
  */
 public class UnorderedPair<F,S> {
-  F first;
-  S second;
+  final F first;
+  final S second;
 
   public F getFirst() {
     return first;

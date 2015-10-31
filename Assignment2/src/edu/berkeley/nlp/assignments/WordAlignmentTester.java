@@ -27,10 +27,10 @@ public class WordAlignmentTester {
    * gold standard alignments for those sentences.
    */
   public static class SentencePair {
-    int sentenceID;
-    String sourceFile;
-    List<String> englishWords;
-    List<String> frenchWords;
+    final int sentenceID;
+    final String sourceFile;
+    final List<String> englishWords;
+    final List<String> frenchWords;
 
     public int getSentenceID() {
       return sentenceID;
@@ -88,8 +88,8 @@ public class WordAlignmentTester {
    * addAlignment(i,j,true).  To display one, use the render method.
    */
   public static class Alignment {
-    Set<Pair<Integer, Integer>> sureAlignments;
-    Set<Pair<Integer, Integer>> possibleAlignments;
+    final Set<Pair<Integer, Integer>> sureAlignments;
+    final Set<Pair<Integer, Integer>> possibleAlignments;
 
     public boolean containsSureAlignment(int englishPosition, int frenchPosition) {
       return sureAlignments.contains(new Pair<Integer, Integer>(englishPosition, frenchPosition));
@@ -180,7 +180,7 @@ public class WordAlignmentTester {
    * french word which is not aligned to "null".  Explicit alignment to
    * position -1 is equivalent to alignment to "null".
    */
-  static interface WordAligner {
+  interface WordAligner {
     Alignment alignSentencePair(SentencePair sentencePair);
   }
 

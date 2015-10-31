@@ -51,11 +51,9 @@ public class CollectionUtils {
    * @return
    */
   public static <T> List<T> makeList(T...elems) {
-	  List<T> list = new ArrayList<T>();
-	  for (T elem: elems) {
-		  list.add(elem);		  
-	  }
-	  return list;
+      List<T> list = new ArrayList<T>();
+      Collections.addAll(list, elems);
+      return list;
   }
   
 }

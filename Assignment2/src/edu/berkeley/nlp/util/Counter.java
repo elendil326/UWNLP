@@ -17,7 +17,7 @@ import java.util.Map.Entry;
 public class Counter <E> implements Serializable {
   private static final long serialVersionUID = 5724671156522771655L;
 
-  Map<E, Double> entries;
+  final Map<E, Double> entries;
 
   int currentModCount = 0;
   int cacheModCount = -1;

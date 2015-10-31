@@ -21,7 +21,7 @@ public class ChartParser {
   static boolean verbose = false;
 
   static class Lexicon {
-    Map<String,List<String>> wordToTags = new HashMap<String, List<String>>();
+    final Map<String,List<String>> wordToTags = new HashMap<String, List<String>>();
     public List<String> getTags(String word) {
       return wordToTags.get(word);
     }
@@ -53,9 +53,9 @@ public class ChartParser {
     }
   }
   static class Grammar {
-    Map<String, List<BinaryRule>> binaryRulesByLeftChild = new HashMap<String, List<BinaryRule>>();
-    Map<String, List<BinaryRule>> binaryRulesByRightChild = new HashMap<String, List<BinaryRule>>();
-    Map<String, List<UnaryRule>> unaryRulesByChild = new HashMap<String, List<UnaryRule>>();
+    final Map<String, List<BinaryRule>> binaryRulesByLeftChild = new HashMap<String, List<BinaryRule>>();
+    final Map<String, List<BinaryRule>> binaryRulesByRightChild = new HashMap<String, List<BinaryRule>>();
+    final Map<String, List<UnaryRule>> unaryRulesByChild = new HashMap<String, List<UnaryRule>>();
 
     public List<BinaryRule> getBinaryRulesByLeftChild(String leftChild) {
       return CollectionUtils.getValueList(binaryRulesByLeftChild, leftChild);
@@ -135,9 +135,9 @@ public class ChartParser {
     }
   }
   static class BinaryRule {
-    String parent;
-    String leftChild;
-    String rightChild;
+    final String parent;
+    final String leftChild;
+    final String rightChild;
 
     public String getParent() {
       return parent;
@@ -159,6 +159,7 @@ public class ChartParser {
 
       if (leftChild != null ? !leftChild.equals(binaryRule.leftChild) : binaryRule.leftChild != null) return false;
       if (parent != null ? !parent.equals(binaryRule.parent) : binaryRule.parent != null) return false;
+      //noinspection RedundantIfStatement
       if (rightChild != null ? !rightChild.equals(binaryRule.rightChild) : binaryRule.rightChild != null) return false;
 
       return true;
@@ -183,8 +184,8 @@ public class ChartParser {
     }
   }
   static class UnaryRule {
-    String parent;
-    String child;
+    final String parent;
+    final String child;
 
     public String getParent() {
       return parent;
@@ -201,6 +202,7 @@ public class ChartParser {
       final UnaryRule unaryRule = (UnaryRule) o;
 
       if (child != null ? !child.equals(unaryRule.child) : unaryRule.child != null) return false;
+      //noinspection RedundantIfStatement
       if (parent != null ? !parent.equals(unaryRule.parent) : unaryRule.parent != null) return false;
 
       return true;
@@ -226,7 +228,7 @@ public class ChartParser {
   static class Edge {
     static class Backtrace {}
     static class WordBacktrace extends Backtrace {
-      String word;
+      final String word;
       public String getWord() {
         return word;
       }
@@ -235,7 +237,7 @@ public class ChartParser {
       }
     }
     static class UnaryBacktrace extends Backtrace {
-      Edge childEdge;
+      final Edge childEdge;
       public Edge getChildEdge() {
         return childEdge;
       }
@@ -244,8 +246,8 @@ public class ChartParser {
       }
     }
     static class BinaryBacktrace extends Backtrace {
-      Edge leftEdge;
-      Edge rightEdge;
+      final Edge leftEdge;
+      final Edge rightEdge;
       public Edge getLeftEdge() {
         return leftEdge;
       }
@@ -258,11 +260,11 @@ public class ChartParser {
       }
     }
 
-    String label;
-    int start;
-    int end;
+    final String label;
+    final int start;
+    final int end;
     boolean discovered;
-    List<Backtrace> backtraces;
+    final List<Backtrace> backtraces;
 
     public String getLabel() {
       return label;
@@ -334,6 +336,7 @@ public class ChartParser {
 
       if (end != edge.end) return false;
       if (start != edge.start) return false;
+      //noinspection RedundantIfStatement
       if (label != null ? !label.equals(edge.label) : edge.label != null) return false;
 
       return true;
@@ -362,8 +365,8 @@ public class ChartParser {
 
   static class Chart {
     static class Index {
-      String label;
-      int pos;
+      final String label;
+      final int pos;
 
       public String getLabel() {
         return label;
@@ -380,6 +383,7 @@ public class ChartParser {
         final Index index = (Index) o;
 
         if (pos != index.pos) return false;
+        //noinspection RedundantIfStatement
         if (label != null ? !label.equals(index.label) : index.label != null) return false;
 
         return true;
@@ -402,8 +406,8 @@ public class ChartParser {
       }
     }
 
-    Map<Index, List<Edge>> edgesByLeftIndex = new HashMap<Index, List<Edge>>();
-    Map<Index, List<Edge>> edgesByRightIndex = new HashMap<Index, List<Edge>>();
+    final Map<Index, List<Edge>> edgesByLeftIndex = new HashMap<Index, List<Edge>>();
+    final Map<Index, List<Edge>> edgesByRightIndex = new HashMap<Index, List<Edge>>();
 
     public void addEdge(Edge edge) {
       CollectionUtils.addToValueList(edgesByLeftIndex, makeLeftIndex(edge), edge);
@@ -427,8 +431,8 @@ public class ChartParser {
     }
   }
 
-  Lexicon lexicon;
-  Grammar grammar;
+  final Lexicon lexicon;
+  final Grammar grammar;
 
   List<String> sentence;
   Chart chart;
@@ -440,7 +444,7 @@ public class ChartParser {
     chart = new Chart();
     edges = new HashMap<Edge,Edge>();
     for (int wordI = 0; wordI < sentence.size(); wordI++) {
-      String word = (String) sentence.get(wordI);
+      String word = sentence.get(wordI);
       List<String> tagList = lexicon.getTags(word);
       if (tagList == null || tagList.isEmpty()) {
         System.err.println("Error: unknown word "+word);
@@ -557,7 +561,7 @@ public class ChartParser {
     parser.parse(sentence);
     List<Tree<String>> parses = parser.getParses();
     for (int parseNum = 0; parseNum < parses.size(); parseNum++) {
-      Tree<String> parse = (Tree<String>) parses.get(parseNum);
+      Tree<String> parse = parses.get(parseNum);
       parse = cleanTree(parse);
       System.out.println("PARSE "+(parseNum+1));
       System.out.print(Trees.PennTreeRenderer.render(parse));

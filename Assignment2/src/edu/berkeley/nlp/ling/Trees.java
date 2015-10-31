@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
  */
 public class Trees {
 	
-  public static interface TreeTransformer<E> {
+  public interface TreeTransformer<E> {
     Tree<E> transformTree(Tree<E> tree);
   }
 
@@ -30,7 +30,7 @@ public class Trees {
 	      if (cutIndex2 > 0 && (cutIndex2 < cutIndex || cutIndex == -1))
 	        cutIndex = cutIndex2;
 	      if (cutIndex > 0 && ! tree.isLeaf()) {
-	        transformedLabel = new String(transformedLabel.substring(0,cutIndex));
+	        transformedLabel = transformedLabel.substring(0, cutIndex);
 	      }
 	      return transformedLabel;
 	}
@@ -110,9 +110,9 @@ public class Trees {
   }
   
   public static class StandardTreeNormalizer implements TreeTransformer<String> {
-    EmptyNodeStripper emptyNodeStripper = new EmptyNodeStripper();
-    XOverXRemover<String> xOverXRemover = new XOverXRemover<String>();
-    FunctionNodeStripper functionNodeStripper = new FunctionNodeStripper();
+    final EmptyNodeStripper emptyNodeStripper = new EmptyNodeStripper();
+    final XOverXRemover<String> xOverXRemover = new XOverXRemover<String>();
+    final FunctionNodeStripper functionNodeStripper = new FunctionNodeStripper();
 
     public Tree<String> transformTree(Tree<String> tree) {
       tree = functionNodeStripper.transformTree(tree);
@@ -132,7 +132,7 @@ public class Trees {
    * @param <S> Original label type
    * @param <T> Output label type
    */
-  public static interface LabelFactory<S,T> {    
+  public interface LabelFactory<S,T> {
 	T newLabel(Tree<S> node);
   }
 
@@ -157,9 +157,9 @@ public class Trees {
   }
   
   public static class PennTreeReader implements Iterator<Tree<String>> {
-    public static String ROOT_LABEL = "ROOT";
+    public static final String ROOT_LABEL = "ROOT";
 
-    PushbackReader in;
+    final PushbackReader in;
     Tree<String> nextTree;
 
     public boolean hasNext() {
@@ -176,7 +176,7 @@ public class Trees {
     private Tree<String> readRootTree() {
       try {
         readWhiteSpace();
-        if (!isLeftParen(peek())) return null;
+        if (isNotLeftParen(peek())) return null;
         return readTree(true);
       } catch (IOException e) {
         throw new RuntimeException("Error reading tree.");
@@ -200,7 +200,7 @@ public class Trees {
     private String readText() throws IOException {
       StringBuilder sb = new StringBuilder();
       int ch = in.read();
-      while (!isWhiteSpace(ch) && !isLeftParen(ch) && !isRightParen(ch)) {
+      while (!isWhiteSpace(ch) && isNotLeftParen(ch) && isNotRightParen(ch)) {
         sb.append((char) ch);
         ch = in.read();
       }
@@ -211,7 +211,7 @@ public class Trees {
 
     private List<Tree<String>> readChildren() throws IOException {
       readWhiteSpace();
-      if (!isLeftParen(peek()))
+      if (isNotLeftParen(peek()))
         return Collections.singletonList(readLeaf());
       return readChildList();
     }
@@ -230,7 +230,7 @@ public class Trees {
     private List<Tree<String>> readChildList() throws IOException {
       List<Tree<String>> children = new ArrayList<Tree<String>>();
       readWhiteSpace();
-      while (!isRightParen(peek())) {
+      while (isNotRightParen(peek())) {
         children.add(readTree(false));
         readWhiteSpace();
       }
@@ -241,14 +241,14 @@ public class Trees {
 //      System.out.println("Read left.");
       readWhiteSpace();
       int ch = in.read();
-      if (!isLeftParen(ch)) throw new RuntimeException("Format error reading tree with character: (" + Character.valueOf((char) ch) + ")");
+      if (isNotLeftParen(ch)) throw new RuntimeException("Format error reading tree with character: (" + Character.valueOf((char) ch) + ")");
     }
 
     private void readRightParen() throws IOException {
 //      System.out.println("Read right.");
       readWhiteSpace();
       int ch = in.read();
-      if (!isRightParen(ch)) throw new RuntimeException("Format error reading tree.");
+      if (isNotRightParen(ch)) throw new RuntimeException("Format error reading tree.");
     }
 
     private void readWhiteSpace() throws IOException {
@@ -263,12 +263,12 @@ public class Trees {
       return (ch == ' ' || ch == '\t' || ch == '\f' || ch == '\r' || ch == '\n');
     }
 
-    private boolean isLeftParen(int ch) {
-      return ch == '(';
+    private boolean isNotLeftParen(int ch) {
+      return ch != '(';
     }
 
-    private boolean isRightParen(int ch) {
-      return ch == ')';
+    private boolean isNotRightParen(int ch) {
+      return ch != ')';
     }
 
     public void remove() {

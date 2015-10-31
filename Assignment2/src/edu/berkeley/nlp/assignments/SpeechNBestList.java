@@ -7,9 +7,9 @@ import java.io.*;
  * @author Dan Klein
  */
 class SpeechNBestList {
-  List<String> correctSentence;
-  List<List<String>> nBestSentences;
-  Map<List<String>, Double> acousticScores;
+  final List<String> correctSentence;
+  final List<List<String>> nBestSentences;
+  final Map<List<String>, Double> acousticScores;
 
   public List<String> getCorrectSentence() {
     return correctSentence;
@@ -136,6 +136,7 @@ class SpeechNBestList {
       List<String> prefixList = new ArrayList<String>();
       File directory = new File(path);
       File[] files = directory.listFiles();
+      assert files != null;
       for (int i = 0; i < files.length; i++) {
         File file = files[i];
         String fileName = file.getName();

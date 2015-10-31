@@ -9,14 +9,12 @@ import java.util.*;
  */
 public class ConcatenationIterator<E> implements Iterator<E> {
 
-  Iterator<Iterator<E>> sourceIterators;
+  final Iterator<Iterator<E>> sourceIterators;
   Iterator<E> currentIterator;
   Iterator<E> lastIteratorToReturn;
 
   public boolean hasNext() {
-    if (currentIterator.hasNext())
-      return true;
-    return false;
+    return currentIterator.hasNext();
   }
 
   public E next() {

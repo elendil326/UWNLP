@@ -15,7 +15,7 @@ import java.io.StringReader;
 public class EnglishPennTreebankParseEvaluator<L> {
     abstract static class AbstractEval<L> {
 
-    protected String str = "";
+    protected final String str = "";
 
     private int exact = 0;
     private int total = 0;
@@ -80,9 +80,9 @@ public class EnglishPennTreebankParseEvaluator<L> {
   }
 
   static class LabeledConstituent<L> {
-    L label;
-    int start;
-    int end;
+    final L label;
+    final int start;
+    final int end;
 
     public L getLabel() {
       return label;
@@ -104,6 +104,7 @@ public class EnglishPennTreebankParseEvaluator<L> {
 
       if (end != labeledConstituent.end) return false;
       if (start != labeledConstituent.start) return false;
+      //noinspection RedundantIfStatement
       if (label != null ? !label.equals(labeledConstituent.label) : labeledConstituent.label != null) return false;
 
       return true;
@@ -130,8 +131,8 @@ public class EnglishPennTreebankParseEvaluator<L> {
 
   public static class LabeledConstituentEval<L> extends AbstractEval<L> {
 
-    Set<L> labelsToIgnore;
-    Set<L> punctuationTags;
+    final Set<L> labelsToIgnore;
+    final Set<L> punctuationTags;
 
     static <L> Tree<L> stripLeaves(Tree<L> tree) {
       if (tree.isLeaf())

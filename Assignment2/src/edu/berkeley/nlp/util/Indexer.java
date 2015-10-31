@@ -12,8 +12,8 @@ import java.util.*;
  */
 public class Indexer <E> extends AbstractList<E> implements Serializable {
   private static final long serialVersionUID = -8769544079136550516L;
-  List<E> objects;
-  Map<E, Integer> indexes;
+  final List<E> objects;
+  final Map<E, Integer> indexes;
 
   /**
    * Return the object with the given index

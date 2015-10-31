@@ -16,8 +16,8 @@ import java.util.Set;
 public class CounterMap <K,V> implements java.io.Serializable {
   private static final long serialVersionUID = 5724671156522771668L;
 
-  MapFactory<V, Double> mf;
-  Map<K, Counter<V>> counterMap;
+  final MapFactory<V, Double> mf;
+  final Map<K, Counter<V>> counterMap;
 
   int currentModCount = 0;
   int cacheModCount = -1;

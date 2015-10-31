@@ -39,11 +39,11 @@ public class GeneralPriorityQueue<E> implements PriorityQueue<E> {
   /**
    * <code>indexToEntry</code> maps linear array locations (not priorities) to heap entries.
    */
-  private List<Entry<E>> indexToEntry;
+  private final List<Entry<E>> indexToEntry;
   /**
    * <code>keyToEntry</code> maps heap objects to their heap entries.
    */
-  private Map<E,Entry<E>> keyToEntry;
+  private final Map<E,Entry<E>> keyToEntry;
 
   public GeneralPriorityQueue<E> deepCopy() {
     GeneralPriorityQueue<E> pq = new GeneralPriorityQueue<E>();
@@ -111,16 +111,14 @@ public class GeneralPriorityQueue<E> implements PriorityQueue<E> {
    * Get the entry by key (null if none).
    */
   private Entry<E> getEntry(Object key) {
-    Entry<E> entry = keyToEntry.get(key);
-    return entry;
+    return keyToEntry.get(key);
   }
 
   /**
    * Get entry by index, exception if none.
    */
   private Entry<E> getEntry(int index) {
-    Entry<E> entry = indexToEntry.get(index);
-    return entry;
+    return indexToEntry.get(index);
   }
 
   private Entry<E> makeEntry(E key) {
@@ -155,33 +153,32 @@ public class GeneralPriorityQueue<E> implements PriorityQueue<E> {
    * formulation with an iterative one to gain (marginal) speed
    */
   private void heapifyDown(Entry<E> entry) {
-    Entry<E> currentEntry = entry;
-    Entry<E> bestEntry = null;
+    Entry<E> bestEntry;
 
     do {
-      bestEntry = currentEntry;
+      bestEntry = entry;
 
-      Entry<E> leftEntry = leftChild(currentEntry);
+      Entry<E> leftEntry = leftChild(entry);
       if (leftEntry != null) {
         if (compare(bestEntry, leftEntry) < 0) {
           bestEntry = leftEntry;
         }
       }
 
-      Entry<E> rightEntry = rightChild(currentEntry);
+      Entry<E> rightEntry = rightChild(entry);
       if (rightEntry != null) {
         if (compare(bestEntry, rightEntry) < 0) {
           bestEntry = rightEntry;
         }
       }
 
-      if (bestEntry != currentEntry) {
+      if (bestEntry != entry) {
         // Swap min and current
-        swap(bestEntry, currentEntry);
+        swap(bestEntry, entry);
         // at start of next loop, we set currentIndex to largestIndex
         // this indexation now holds current, so it is unchanged
       }
-    } while (bestEntry != currentEntry);
+    } while (bestEntry != entry);
     // System.err.println("Done with heapify down");
     // verify();
   }
@@ -209,7 +206,7 @@ public class GeneralPriorityQueue<E> implements PriorityQueue<E> {
    * @return the object with minimum key
    */
   public E getFirst() {
-    if (isEmpty())throw new NoSuchElementException();
+    if (!isNotEmpty())throw new NoSuchElementException();
     return getEntry(0).key;
   }
 
@@ -258,7 +255,6 @@ public class GeneralPriorityQueue<E> implements PriorityQueue<E> {
     } else {
       removeLastEntry();
     }
-    return;
   }
 
   private Entry<E> getLastEntry() {
@@ -328,8 +324,8 @@ public class GeneralPriorityQueue<E> implements PriorityQueue<E> {
    *
    * @return a <code>boolean</code> value
    */
-  public boolean isEmpty() {
-    return indexToEntry.isEmpty();
+  public boolean isNotEmpty() {
+    return !indexToEntry.isEmpty();
   }
 
   /**
@@ -420,7 +416,7 @@ public class GeneralPriorityQueue<E> implements PriorityQueue<E> {
     PriorityQueue<E> pq = deepCopy();
     StringBuilder sb = new StringBuilder("[");
     int numKeysPrinted = 0;
-    while (numKeysPrinted < maxKeysToPrint && ! pq.isEmpty()) {
+    while (numKeysPrinted < maxKeysToPrint && pq.isNotEmpty()) {
       double priority = pq.getPriority();
       E element = pq.removeFirst();
       sb.append(element.toString());

@@ -27,5 +27,5 @@ public interface PriorityQueue <E> extends Iterator<E> {
 
   int size();
 
-  boolean isEmpty();
+  boolean isNotEmpty();
 }

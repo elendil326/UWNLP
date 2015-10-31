@@ -6,9 +6,9 @@ package edu.berkeley.nlp.ling;
  * @author Dan Klein
  */
 public class Constituent<L> {
-  L label;
-  int start;
-  int end;
+  final L label;
+  final int start;
+  final int end;
 
   public L getLabel() {
     return label;
@@ -34,6 +34,7 @@ public class Constituent<L> {
 
     if (end != constituent.end) return false;
     if (start != constituent.start) return false;
+    //noinspection RedundantIfStatement
     if (label != null ? !label.equals(constituent.label) : constituent.label != null) return false;
 
     return true;

@@ -6,8 +6,8 @@ package edu.berkeley.nlp.classify;
  * @author Dan Klein
  */
 public class LabeledInstance<I,L> {
-  I instance;
-  L label;
+  final I instance;
+  final L label;
 
   public I getInput() {
     return instance;
@@ -24,6 +24,7 @@ public class LabeledInstance<I,L> {
     final LabeledInstance labeledInstance = (LabeledInstance) o;
 
     if (instance != null ? !instance.equals(labeledInstance.instance) : labeledInstance.instance != null) return false;
+    //noinspection RedundantIfStatement
     if (label != null ? !label.equals(labeledInstance.label) : labeledInstance.label != null) return false;
 
     return true;

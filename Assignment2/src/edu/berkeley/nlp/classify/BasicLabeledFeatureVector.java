@@ -12,8 +12,8 @@ import java.util.List;
  * @author Dan Klein
  */
 public class BasicLabeledFeatureVector <F,L> implements LabeledFeatureVector<F, L> {
-  L label;
-  Counter<F> features;
+  final L label;
+  final Counter<F> features;
 
   public L getLabel() {
     return label;

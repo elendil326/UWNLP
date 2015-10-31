@@ -15,8 +15,8 @@ public class Pair<F,S> implements Serializable {
   S second;
 
   public static class LexicographicPairComparator<F,S>  implements Comparator<Pair<F,S>> {
-    Comparator<F> firstComparator;
-    Comparator<S> secondComparator;
+    final Comparator<F> firstComparator;
+    final Comparator<S> secondComparator;
 
     public int compare(Pair<F, S> pair1, Pair<F, S> pair2) {
       int firstCompare = firstComparator.compare(pair1.getFirst(), pair2.getFirst());
@@ -56,6 +56,7 @@ public class Pair<F,S> implements Serializable {
     final Pair pair = (Pair) o;
 
     if (first != null ? !first.equals(pair.first) : pair.first != null) return false;
+    //noinspection RedundantIfStatement
     if (second != null ? !second.equals(pair.second) : pair.second != null) return false;
 
     return true;

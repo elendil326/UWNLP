@@ -9,10 +9,10 @@ import java.io.File;
  * @author Dan Klein
  */
 class NumberRangeFileFilter implements FileFilter {
-  int highFileNum;
-  int lowFileNum;
-  String extension;
-  boolean recurse;
+  final int highFileNum;
+  final int lowFileNum;
+  final String extension;
+  final boolean recurse;
 
   public boolean accept(File pathname) {
     if (pathname.isDirectory())
@@ -26,9 +26,7 @@ class NumberRangeFileFilter implements FileFilter {
     int numEndLoc = lastNumberIndex+1;
     int numStartLoc = getLastNonNumberIndex(name, lastNumberIndex)+1;
     int fileNum = Integer.parseInt(name.substring(numStartLoc, numEndLoc));
-    if (fileNum >= lowFileNum && fileNum <= highFileNum)
-      return true;
-    return false;
+    return fileNum >= lowFileNum && fileNum <= highFileNum;
   }
 
   private int getLastNonNumberIndex(String name, int lastNumberIndex) {

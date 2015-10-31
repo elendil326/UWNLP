@@ -22,8 +22,8 @@ public class POSTaggerTester {
    * tags.
    */
   static class TaggedSentence {
-    List<String> words;
-    List<String> tags;
+    final List<String> words;
+    final List<String> tags;
 
     public int size() {
       return words.size();
@@ -56,6 +56,7 @@ public class POSTaggerTester {
       final TaggedSentence taggedSentence = (TaggedSentence) o;
 
       if (tags != null ? !tags.equals(taggedSentence.tags) : taggedSentence.tags != null) return false;
+      //noinspection RedundantIfStatement
       if (words != null ? !words.equals(taggedSentence.words) : taggedSentence.words != null) return false;
 
       return true;
@@ -85,13 +86,13 @@ public class POSTaggerTester {
    */
   static class State {
 
-    private static transient Interner<State> stateInterner = new Interner<State>(new Interner.CanonicalFactory<State>() {
+    private static final transient Interner<State> stateInterner = new Interner<State>(new Interner.CanonicalFactory<State>() {
       public State build(State state) {
         return new State(state);
       }
     });
 
-    private static transient State tempState = new State();
+    private static final transient State tempState = new State();
 
     public static State getStartState() {
       return buildState(START_TAG, START_TAG, 0);
@@ -145,6 +146,7 @@ public class POSTaggerTester {
 
       if (position != state.position) return false;
       if (previousPreviousTag != null ? !previousPreviousTag.equals(state.previousPreviousTag) : state.previousPreviousTag != null) return false;
+      //noinspection RedundantIfStatement
       if (previousTag != null ? !previousTag.equals(state.previousTag) : state.previousTag != null) return false;
 
       return true;
@@ -187,8 +189,8 @@ public class POSTaggerTester {
   static class Trellis <S> {
     S startState;
     S endState;
-    CounterMap<S, S> forwardTransitions;
-    CounterMap<S, S> backwardTransitions;
+    final CounterMap<S, S> forwardTransitions;
+    final CounterMap<S, S> backwardTransitions;
 
     /**
      * Get the unique start state for this trellis.
@@ -250,7 +252,7 @@ public class POSTaggerTester {
    * trellis.getEndState(), and each pair of states is conntected in the
    * trellis.
    */
-  static interface TrellisDecoder <S> {
+  interface TrellisDecoder <S> {
     List<S> getBestPath(Trellis<S> trellis);
   }
 
@@ -271,8 +273,8 @@ public class POSTaggerTester {
 
   static class POSTagger {
 
-    LocalTrigramScorer localTrigramScorer;
-    TrellisDecoder<State> trellisDecoder;
+    final LocalTrigramScorer localTrigramScorer;
+    final TrellisDecoder<State> trellisDecoder;
 
     // chop up the training instances into local contexts and pass them on to the local scorer.
     public void train(List<TaggedSentence> taggedSentences) {
@@ -378,10 +380,10 @@ public class POSTaggerTester {
    * two tags -- basically a FeatureVector.
    */
   static class LocalTrigramContext {
-    List<String> words;
-    int position;
-    String previousTag;
-    String previousPreviousTag;
+    final List<String> words;
+    final int position;
+    final String previousTag;
+    final String previousPreviousTag;
 
     public List<String> getWords() {
       return words;
@@ -420,7 +422,7 @@ public class POSTaggerTester {
    * position -- basically a LabeledFeatureVector
    */
   static class LabeledLocalTrigramContext extends LocalTrigramContext {
-    String currentTag;
+    final String currentTag;
 
     public String getCurrentTag() {
       return currentTag;
@@ -440,13 +442,13 @@ public class POSTaggerTester {
    * LocalTrigramScorers assign scores to tags occuring in specific
    * LocalTrigramContexts.
    */
-  static interface LocalTrigramScorer {
+  interface LocalTrigramScorer {
     /**
      * The Counter returned should contain log probabilities, meaning if all
      * values are exponentiated and summed, they should sum to one (if it's a 
-	 * single conditional pobability). For efficiency, the Counter can 
-	 * contain only the tags which occur in the given context 
-	 * with non-zero model probability.
+     * single conditional pobability). For efficiency, the Counter can
+     * contain only the tags which occur in the given context
+     * with non-zero model probability.
      */
     Counter<String> getLogScoreCounter(LocalTrigramContext localTrigramContext);
 
@@ -465,11 +467,11 @@ public class POSTaggerTester {
    */
   static class MostFrequentTagScorer implements LocalTrigramScorer {
 
-    boolean restrictTrigrams; // if true, assign log score of Double.NEGATIVE_INFINITY to illegal tag trigrams.
+    final boolean restrictTrigrams; // if true, assign log score of Double.NEGATIVE_INFINITY to illegal tag trigrams.
 
     CounterMap<String, String> wordsToTags = new CounterMap<String, String>();
     Counter<String> unknownWordTags = new Counter<String>();
-    Set<String> seenTagTrigrams = new HashSet<String>();
+    final Set<String> seenTagTrigrams = new HashSet<String>();
 
     public int getHistorySize() {
       return 2;
@@ -681,9 +683,9 @@ public class POSTaggerTester {
     // Evaluation set, use either test of validation (for dev)
     final List<TaggedSentence> evalTaggedSentences;
     if (useValidation) {
-    	evalTaggedSentences = validationTaggedSentences;
+        evalTaggedSentences = validationTaggedSentences;
     } else {
-    	evalTaggedSentences = testTaggedSentences;
+        evalTaggedSentences = testTaggedSentences;
     }
     
     // Test tagger

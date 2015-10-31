@@ -1,5 +1,6 @@
 package edu.berkeley.nlp.assignments;
 
+import com.sun.istack.internal.NotNull;
 import edu.berkeley.nlp.langmodel.LanguageModel;
 import edu.berkeley.nlp.util.CommandLineUtils;
 
@@ -27,9 +28,9 @@ public class LanguageModelTester {
 
   // HELPER CLASS FOR THE HARNESS, CAN IGNORE
   static class EditDistance {
-    static double INSERT_COST = 1.0;
-    static double DELETE_COST = 1.0;
-    static double SUBSTITUTE_COST = 1.0;
+    static final double INSERT_COST = 1.0;
+    static final double DELETE_COST = 1.0;
+    static final double SUBSTITUTE_COST = 1.0;
 
     private double[][] initialize(double[][] d) {
       for (int i = 0; i < d.length; i++) {
@@ -40,12 +41,12 @@ public class LanguageModelTester {
       return d;
     }
 
-    public double getDistance(List<? extends Object> firstList, List<? extends Object> secondList) {
+    public double getDistance(List<?> firstList, List<?> secondList) {
       double[][] bestDistances = initialize(new double[firstList.size() + 1][secondList.size() + 1]);
       return getDistance(firstList, secondList, 0, 0, bestDistances);
     }
 
-    private double getDistance(List<? extends Object> firstList, List<? extends Object> secondList, int firstPosition, int secondPosition, double[][] bestDistances) {
+    private double getDistance(List<?> firstList, List<?> secondList, int firstPosition, int secondPosition, double[][] bestDistances) {
       if (firstPosition > firstList.size() || secondPosition > secondList.size())
         return Double.POSITIVE_INFINITY;
       if (firstPosition == firstList.size() && secondPosition == secondList.size())
@@ -70,7 +71,7 @@ public class LanguageModelTester {
   static class SentenceCollection extends AbstractCollection<List<String>> {
     static class SentenceIterator implements Iterator<List<String>> {
 
-      BufferedReader reader;
+      final BufferedReader reader;
 
       public boolean hasNext() {
         try {
@@ -104,7 +105,7 @@ public class LanguageModelTester {
       }
     }
 
-    String fileName;
+    final String fileName;
 
     public Iterator<List<String>> iterator() {
       try {
@@ -146,8 +147,7 @@ public class LanguageModelTester {
       numSymbols += sentence.size();
     }
     double avgLogProbability = logProbability / numSymbols;
-    double perplexity = Math.pow(0.5, avgLogProbability);
-    return perplexity;
+    return Math.pow(0.5, avgLogProbability);
   }
 
   static double calculateWordErrorRate(LanguageModel languageModel, List<SpeechNBestList> speechNBestLists, boolean verbose) {
@@ -189,7 +189,7 @@ public class LanguageModelTester {
     return totalDistance / totalWords;
   }
 
-  private static NumberFormat nf = new DecimalFormat("0.00E00");
+  private static final NumberFormat nf = new DecimalFormat("0.00E00");
   private static void displayHypothesis(String prefix, List<String> guess, SpeechNBestList speechNBestList, LanguageModel languageModel) {
     double acoustic = speechNBestList.getAcousticScore(guess)/16.0;
     double language = Math.log(languageModel.getSentenceProbability(guess));
@@ -335,7 +335,9 @@ public class LanguageModelTester {
     double wordErrorRate = calculateWordErrorRate(languageModel, speechNBestLists, verbose);
     System.out.println("HUB Word Error Rate: " + wordErrorRate);
     System.out.println("Generated Sentences:");
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 10; i++) {
+      assert languageModel != null;
       System.out.println("  " + languageModel.generateSentence());
+    }
   }
 }

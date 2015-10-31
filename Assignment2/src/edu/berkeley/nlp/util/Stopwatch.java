@@ -18,6 +18,7 @@ package edu.berkeley.nlp.util;
  */
 public class Stopwatch {
 
+	@SuppressWarnings("FieldCanBeLocal")
 	private long startTick, stopTick;
 	private double totalElapsedTime;
 	private double lastElapsedTime;

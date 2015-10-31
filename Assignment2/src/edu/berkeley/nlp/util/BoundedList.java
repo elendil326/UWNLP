@@ -10,9 +10,9 @@ import java.util.List;
  * @author Dan Klein
  */
 public class BoundedList <E> extends AbstractList<E> {
-  private E leftBoundary;
-  private E rightBoundary;
-  private List<E> list;
+  private final E leftBoundary;
+  private final E rightBoundary;
+  private final List<E> list;
 
   /**
    * Returns the object at the given index, provided the index is between 0

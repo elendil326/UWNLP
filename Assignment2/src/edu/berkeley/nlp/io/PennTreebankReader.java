@@ -14,10 +14,10 @@ public class PennTreebankReader {
 
   static class TreeCollection extends AbstractCollection<Tree<String>> {
 
-    List<File> files;
+    final List<File> files;
 
     static class TreeIteratorIterator implements Iterator<Iterator<Tree<String>>> {
-      Iterator<File> fileIterator;
+      final Iterator<File> fileIterator;
       Iterator<Tree<String>> nextTreeIterator;
 
       public boolean hasNext() {
@@ -80,6 +80,7 @@ public class PennTreebankReader {
       }
       if (root.isDirectory()) {
         File[] children = root.listFiles();
+        assert children != null;
         for (int i = 0; i < children.length; i++) {
           File child = children[i];
           addFilesUnder(child, files, fileFilter);

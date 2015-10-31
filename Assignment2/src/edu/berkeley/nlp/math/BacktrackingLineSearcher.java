@@ -3,16 +3,18 @@ package edu.berkeley.nlp.math;
 /**
  */
 public class BacktrackingLineSearcher implements GradientLineSearcher {
-  private double EPS = 1e-10;
+  @SuppressWarnings("FieldCanBeLocal")
+  private final double EPS = 1e-10;
   double stepSizeMultiplier = 0.9;
-  private double sufficientDecreaseConstant = 1e-4;//0.9;
+  @SuppressWarnings("FieldCanBeLocal")
+  private final double sufficientDecreaseConstant = 1e-4;//0.9;
 
   public double[] minimize(DifferentiableFunction function, double[] initial, double[] direction) {
     double stepSize = 1.0;
     double initialFunctionValue = function.valueAt(initial);
     double initialDirectionalDerivative = DoubleArrays.innerProduct(function.derivativeAt(initial), direction);
     double[] guess = null;
-    double guessValue = 0.0;
+    double guessValue;
     boolean sufficientDecreaseObtained = false;
 //    if (false) {
 //      guess = DoubleArrays.addMultiples(initial, 1.0, direction, EPS);

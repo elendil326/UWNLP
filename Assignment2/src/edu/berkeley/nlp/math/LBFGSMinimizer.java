@@ -8,18 +8,18 @@ import java.util.LinkedList;
  */
 public class LBFGSMinimizer implements GradientMinimizer, Serializable {
   private static final long serialVersionUID = 36473897808840226L;
-  double EPS = 1e-10;
+  final double EPS = 1e-10;
   int maxIterations = 20;
   int maxHistorySize = 5;
-  LinkedList<double[]> inputDifferenceVectorList = new LinkedList<double[]>();
-  LinkedList<double[]> derivativeDifferenceVectorList = new LinkedList<double[]>();
+  final LinkedList<double[]> inputDifferenceVectorList = new LinkedList<double[]>();
+  final LinkedList<double[]> derivativeDifferenceVectorList = new LinkedList<double[]>();
   transient IterationCallbackFunction iterCallbackFunction = null;
   int minIterations = -1;
   double initialStepSizeMultiplier = 0.01;
   double stepSizeMultiplier = 0.5;
   
-  public static interface IterationCallbackFunction {
-    public void iterationDone(double[] curGuess,int iter);
+  public interface IterationCallbackFunction {
+    void iterationDone(double[] curGuess, int iter);
   }
   
   public void setMinIteratons(int minIterations) {
@@ -83,9 +83,7 @@ public class LBFGSMinimizer implements GradientMinimizer, Serializable {
       return true;
     double valueChange = SloppyMath.abs(nextValue - value);
     double valueAverage = SloppyMath.abs(nextValue + value + EPS) / 2.0;
-    if (valueChange / valueAverage < tolerance)
-      return true;
-    return false;
+    return valueChange / valueAverage < tolerance;
   }
 
   private void updateHistories(double[] guess, double[] nextGuess, double[] derivative, double[] nextDerivative) {

@@ -24,7 +24,7 @@ public class MostFrequentLabelClassifier<I,L> implements ProbabilisticClassifier
 
   }
 
-  Counter<L> labels;
+  final Counter<L> labels;
 
   public Counter<L> getProbabilities(I input) {
     Counter<L> counter = new Counter<L>();

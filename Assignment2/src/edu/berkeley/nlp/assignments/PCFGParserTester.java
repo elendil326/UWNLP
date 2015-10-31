@@ -18,7 +18,7 @@ public class PCFGParserTester {
   /**
    * Parsers are required to map sentences to trees.  How a parser is constructed and trained is not specified.
    */
-  static interface Parser {
+  interface Parser {
     Tree<String> getBestParse(List<String> sentence);
   }
 
@@ -28,13 +28,13 @@ public class PCFGParserTester {
    * sequences.
    */
   static class BaselineParser implements Parser {
-    CounterMap<List<String>, Tree<String>> knownParses;
-    CounterMap<Integer, String> spanToCategories;
-    Lexicon lexicon;
+    final CounterMap<List<String>, Tree<String>> knownParses;
+    final CounterMap<Integer, String> spanToCategories;
+    final Lexicon lexicon;
 
     public Tree<String> getBestParse(List<String> sentence) {
       List<String> tags = getBaselineTagging(sentence);
-      Tree<String> annotatedBestParse = null;
+      Tree<String> annotatedBestParse;
       if (knownParses.keySet().contains(tags)) {
         annotatedBestParse = getBestKnownParse(tags);
       } else {
@@ -69,8 +69,7 @@ public class PCFGParserTester {
 
     private Tree<String> buildTagTree(List<String> words, List<String> tags, int currentPosition) {
       Tree<String> leafTree = new Tree<String>(words.get(currentPosition));
-      Tree<String> tagTree = new Tree<String>(tags.get(currentPosition), Collections.singletonList(leafTree));
-      return tagTree;
+      return new Tree<String>(tags.get(currentPosition), Collections.singletonList(leafTree));
     }
 
     private Tree<String> getBestKnownParse(List<String> tags) {
@@ -190,8 +189,7 @@ public class PCFGParserTester {
           return s.startsWith("@");
         }
       });
-      Tree<String> unAnnotatedTree = (new Trees.FunctionNodeStripper()).transformTree(debinarizedTree);
-      return unAnnotatedTree;
+      return (new Trees.FunctionNodeStripper()).transformTree(debinarizedTree);
     }
   }
 
@@ -200,12 +198,12 @@ public class PCFGParserTester {
    * P(tag|word)/P(tag).
    */
   static class Lexicon {
-    CounterMap<String, String> wordToTagCounters = new CounterMap<String, String>();
+    final CounterMap<String, String> wordToTagCounters = new CounterMap<String, String>();
     double totalTokens = 0.0;
     double totalWordTypes = 0.0;
-    Counter<String> tagCounter = new Counter<String>();
-    Counter<String> wordCounter = new Counter<String>();
-    Counter<String> typeTagCounter = new Counter<String>();
+    final Counter<String> tagCounter = new Counter<String>();
+    final Counter<String> wordCounter = new Counter<String>();
+    final Counter<String> typeTagCounter = new Counter<String>();
 
     public Set<String> getAllTags() {
       return tagCounter.keySet();
@@ -257,14 +255,14 @@ public class PCFGParserTester {
    * probability estimates are just relative frequency estimates off of training trees.
    */
   static class Grammar {
-    Map<String, List<BinaryRule>> binaryRulesByLeftChild = new HashMap<String, List<BinaryRule>>();
-    Map<String, List<BinaryRule>> binaryRulesByRightChild = new HashMap<String, List<BinaryRule>>();
-    Map<String, List<BinaryRule>> binaryRulesByParent = new HashMap<String, List<BinaryRule>>();
-    List<BinaryRule> binaryRules = new ArrayList<BinaryRule>();
-    Map<String, List<UnaryRule>> unaryRulesByChild = new HashMap<String, List<UnaryRule>>();
-    Map<String, List<UnaryRule>> unaryRulesByParent = new HashMap<String, List<UnaryRule>>();
-    List<UnaryRule> unaryRules = new ArrayList<UnaryRule>();
-    Set<String> states = new HashSet<String>();
+    final Map<String, List<BinaryRule>> binaryRulesByLeftChild = new HashMap<String, List<BinaryRule>>();
+    final Map<String, List<BinaryRule>> binaryRulesByRightChild = new HashMap<String, List<BinaryRule>>();
+    final Map<String, List<BinaryRule>> binaryRulesByParent = new HashMap<String, List<BinaryRule>>();
+    final List<BinaryRule> binaryRules = new ArrayList<BinaryRule>();
+    final Map<String, List<UnaryRule>> unaryRulesByChild = new HashMap<String, List<UnaryRule>>();
+    final Map<String, List<UnaryRule>> unaryRulesByParent = new HashMap<String, List<UnaryRule>>();
+    final List<UnaryRule> unaryRules = new ArrayList<UnaryRule>();
+    final Set<String> states = new HashSet<String>();
 
     public List<BinaryRule> getBinaryRulesByLeftChild(String leftChild) {
       return CollectionUtils.getValueList(binaryRulesByLeftChild, leftChild);
@@ -386,9 +384,9 @@ public class PCFGParserTester {
   }
 
   static class BinaryRule {
-    String parent;
-    String leftChild;
-    String rightChild;
+    final String parent;
+    final String leftChild;
+    final String rightChild;
     double score;
 
     public String getParent() {
@@ -419,6 +417,7 @@ public class PCFGParserTester {
 
       if (leftChild != null ? !leftChild.equals(binaryRule.leftChild) : binaryRule.leftChild != null) return false;
       if (parent != null ? !parent.equals(binaryRule.parent) : binaryRule.parent != null) return false;
+      //noinspection RedundantIfStatement
       if (rightChild != null ? !rightChild.equals(binaryRule.rightChild) : binaryRule.rightChild != null) return false;
 
       return true;
@@ -444,8 +443,8 @@ public class PCFGParserTester {
   }
 
   static class UnaryRule {
-    String parent;
-    String child;
+    final String parent;
+    final String child;
     double score;
 
     public String getParent() {
@@ -471,6 +470,7 @@ public class PCFGParserTester {
       final UnaryRule unaryRule = (UnaryRule) o;
 
       if (child != null ? !child.equals(unaryRule.child) : unaryRule.child != null) return false;
+      //noinspection RedundantIfStatement
       if (parent != null ? !parent.equals(unaryRule.parent) : unaryRule.parent != null) return false;
 
       return true;
@@ -499,9 +499,9 @@ public class PCFGParserTester {
    * retrieve the full sequence of symbols (from parent to child) which support that path.
    */
   static class UnaryClosure {
-    Map<String, List<UnaryRule>> closedUnaryRulesByChild = new HashMap<String, List<UnaryRule>>();
-    Map<String, List<UnaryRule>> closedUnaryRulesByParent = new HashMap<String, List<UnaryRule>>();
-    Map<UnaryRule, List<String>> pathMap = new HashMap<UnaryRule, List<String>>();
+    final Map<String, List<UnaryRule>> closedUnaryRulesByChild = new HashMap<String, List<UnaryRule>>();
+    final Map<String, List<UnaryRule>> closedUnaryRulesByParent = new HashMap<String, List<UnaryRule>>();
+    final Map<UnaryRule, List<String>> pathMap = new HashMap<UnaryRule, List<String>>();
 
     public List<UnaryRule> getClosedUnaryRulesByChild(String child) {
       return CollectionUtils.getValueList(closedUnaryRulesByChild, child);
@@ -673,7 +673,7 @@ public class PCFGParserTester {
     System.out.print("Loading training trees (sections 2-21) ... ");
     List<Tree<String>> trainTrees = readTrees(basePath, 200, 2199, maxTrainLength);
     System.out.println("done. (" + trainTrees.size() + " trees)");
-    List<Tree<String>> testTrees = null;
+    List<Tree<String>> testTrees;
     if (testMode.equalsIgnoreCase("validate")) {
       System.out.print("Loading validation trees (section 22) ... ");
       testTrees = readTrees(basePath, 2200, 2299, maxTestLength);
