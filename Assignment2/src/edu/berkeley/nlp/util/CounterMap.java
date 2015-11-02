@@ -59,15 +59,15 @@ public class CounterMap <K,V> implements java.io.Serializable {
   }
   
   public void incrementAll(Map<K,V> map, double count) {
-	  for (Map.Entry<K, V> entry: map.entrySet()) {
-		  incrementCount(entry.getKey(), entry.getValue(), count);
-	  }
+      for (Map.Entry<K, V> entry: map.entrySet()) {
+          incrementCount(entry.getKey(), entry.getValue(), count);
+      }
   }
   
   public void incrementAll(Collection<Pair<K,V>> entries, double count) {
-	  for (Pair<K,V> entry: entries) {
-		  incrementCount(entry.getFirst(), entry.getSecond(), count);
-	  }
+      for (Pair<K,V> entry: entries) {
+          incrementCount(entry.getFirst(), entry.getSecond(), count);
+      }
   }
 
   /**
@@ -100,7 +100,7 @@ public class CounterMap <K,V> implements java.io.Serializable {
    * @return
    */
   public boolean containsKey(K key) {
-	  return counterMap.containsKey(key);
+      return counterMap.containsKey(key);
   }
 
   /**

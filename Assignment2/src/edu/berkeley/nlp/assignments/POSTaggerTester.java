@@ -86,7 +86,7 @@ public class POSTaggerTester {
    */
   static class State {
 
-    private static final transient Interner<State> stateInterner = new Interner<State>(new Interner.CanonicalFactory<State>() {
+    private static final transient Interner<State> stateInterner = new Interner<>(new Interner.CanonicalFactory<State>() {
       public State build(State state) {
         return new State(state);
       }
@@ -108,7 +108,7 @@ public class POSTaggerTester {
     }
 
     public static List<String> toTagList(List<State> states) {
-      List<String> tags = new ArrayList<String>();
+      List<String> tags = new ArrayList<>();
       if (states.size() > 0) {
         tags.add(states.get(0).getPreviousPreviousTag());
         for (State state : states) {
@@ -241,8 +241,8 @@ public class POSTaggerTester {
     }
 
     public Trellis() {
-      forwardTransitions = new CounterMap<S, S>();
-      backwardTransitions = new CounterMap<S, S>();
+      forwardTransitions = new CounterMap<>();
+      backwardTransitions = new CounterMap<>();
     }
   }
 
@@ -258,7 +258,7 @@ public class POSTaggerTester {
 
   static class GreedyDecoder <S> implements TrellisDecoder<S> {
     public List<S> getBestPath(Trellis<S> trellis) {
-      List<S> states = new ArrayList<S>();
+      List<S> states = new ArrayList<>();
       S currentState = trellis.getStartState();
       states.add(currentState);
       while (!currentState.equals(trellis.getEndState())) {
@@ -268,6 +268,83 @@ public class POSTaggerTester {
         currentState = nextState;
       }
       return states;
+    }
+  }
+
+  static class ViterbiDecoder <S> implements TrellisDecoder<S> {
+    CounterMap<Integer, S> piCache = new CounterMap<>();
+    Map<Integer, CounterMap<S, S>> bpCache = new HashMap<>();
+    Map<Integer, Set<S>> transitionQueue = new HashMap<>();
+
+    public List<S> getBestPath(Trellis<S> trellis) {
+      List<S> states = new ArrayList<>();
+      piCache = new CounterMap<>();
+      bpCache = new HashMap<>();
+      S currentState = trellis.getStartState();
+      piCache.setCount(0, currentState, 1.0);
+      int pos = 0;
+      transitionQueue.put(pos, new HashSet<S>());
+      transitionQueue.get(pos).add(currentState);
+      while (true) {
+        if (!transitionQueue.containsKey(pos) || currentState.equals(trellis.getEndState()))
+          break;
+
+        for (S state : transitionQueue.get(pos)) {
+          currentState = state;
+          if (currentState.equals(trellis.getEndState()))
+            break;
+
+          Counter<S> forwardTransitions = trellis.getForwardTransitions(currentState);
+          for (S nextState : forwardTransitions.keySet()) {
+            GetPi(pos + 1, nextState, trellis);
+            if (!transitionQueue.containsKey(pos + 1)) {
+              transitionQueue.put(pos + 1, new HashSet<S>());
+            }
+            transitionQueue.get(pos + 1).add(nextState);
+          }
+        }
+
+        pos++;
+      }
+
+      currentState = trellis.getEndState();
+      for (int i = pos - 1; i > 0; i--)
+      {
+        states.add(0, bpCache.get(i).getCounter(currentState).argMax());
+        currentState = states.get(0);
+      }
+
+      return states;
+    }
+
+    public double GetPi(int pos, S state, Trellis<S> trellis)
+    {
+      if (piCache.containsKey(pos))
+      {
+        if (piCache.getCounter(pos).containsKey(state))
+          return piCache.getCount(pos, state);
+      }
+
+      double max = Double.NEGATIVE_INFINITY;
+      S maxState = null;
+      Counter<S> backwardTransitions = trellis.getBackwardTransitions(state);
+      for (S previousState : backwardTransitions.keySet())
+      {
+        double previousPi = GetPi(pos - 1, previousState, trellis) * backwardTransitions.getCount(previousState);
+        if (previousPi > max) {
+          max = previousPi;
+          maxState = previousState;
+        }
+      }
+
+      piCache.setCount(pos, state, max);
+      if (!bpCache.containsKey(pos))
+      {
+        bpCache.put(pos, new CounterMap<S, S>());
+      }
+      bpCache.get(pos).setCount(state, maxState, max);
+
+      return max;
     }
   }
 
@@ -287,7 +364,7 @@ public class POSTaggerTester {
     }
 
     private List<LabeledLocalTrigramContext> extractLabeledLocalTrigramContexts(List<TaggedSentence> taggedSentences) {
-      List<LabeledLocalTrigramContext> localTrigramContexts = new ArrayList<LabeledLocalTrigramContext>();
+      List<LabeledLocalTrigramContext> localTrigramContexts = new ArrayList<>();
       for (TaggedSentence taggedSentence : taggedSentences) {
         localTrigramContexts.addAll(extractLabeledLocalTrigramContexts(taggedSentence));
       }
@@ -295,9 +372,9 @@ public class POSTaggerTester {
     }
 
     private List<LabeledLocalTrigramContext> extractLabeledLocalTrigramContexts(TaggedSentence taggedSentence) {
-      List<LabeledLocalTrigramContext> labeledLocalTrigramContexts = new ArrayList<LabeledLocalTrigramContext>();
-      List<String> words = new BoundedList<String>(taggedSentence.getWords(), START_WORD, STOP_WORD);
-      List<String> tags = new BoundedList<String>(taggedSentence.getTags(), START_TAG, STOP_TAG);
+      List<LabeledLocalTrigramContext> labeledLocalTrigramContexts = new ArrayList<>();
+      List<String> words = new BoundedList<>(taggedSentence.getWords(), START_WORD, STOP_WORD);
+      List<String> tags = new BoundedList<>(taggedSentence.getTags(), START_TAG, STOP_TAG);
       for (int position = 0; position <= taggedSentence.size() + 1; position++) {
         labeledLocalTrigramContexts.add(new LabeledLocalTrigramContext(words, position, tags.get(position - 2), tags.get(position - 1), tags.get(position)));
       }
@@ -311,13 +388,13 @@ public class POSTaggerTester {
      * really).
      */
     private Trellis<State> buildTrellis(List<String> sentence) {
-      Trellis<State> trellis = new Trellis<State>();
+      Trellis<State> trellis = new Trellis<>();
       trellis.setStartState(State.getStartState());
       State stopState = State.getStopState(sentence.size() + 2);
       trellis.setStopState(stopState);
       Set<State> states = Collections.singleton(State.getStartState());
       for (int position = 0; position <= sentence.size() + 1; position++) {
-        Set<State> nextStates = new HashSet<State>();
+        Set<State> nextStates = new HashSet<>();
         for (State state : states) {
           if (state.equals(stopState))
             continue;
@@ -442,7 +519,7 @@ public class POSTaggerTester {
    * LocalTrigramScorers assign scores to tags occuring in specific
    * LocalTrigramContexts.
    */
-  interface LocalTrigramScorer {
+  public interface LocalTrigramScorer {
     /**
      * The Counter returned should contain log probabilities, meaning if all
      * values are exponentiated and summed, they should sum to one (if it's a 
@@ -469,9 +546,9 @@ public class POSTaggerTester {
 
     final boolean restrictTrigrams; // if true, assign log score of Double.NEGATIVE_INFINITY to illegal tag trigrams.
 
-    CounterMap<String, String> wordsToTags = new CounterMap<String, String>();
-    Counter<String> unknownWordTags = new Counter<String>();
-    final Set<String> seenTagTrigrams = new HashSet<String>();
+    CounterMap<String, String> wordsToTags = new CounterMap<>();
+    Counter<String> unknownWordTags = new Counter<>();
+    final Set<String> seenTagTrigrams = new HashSet<>();
 
     public int getHistorySize() {
       return 2;
@@ -485,7 +562,7 @@ public class POSTaggerTester {
         tagCounter = wordsToTags.getCounter(word);
       }
       Set<String> allowedFollowingTags = allowedFollowingTags(tagCounter.keySet(), localTrigramContext.getPreviousPreviousTag(), localTrigramContext.getPreviousTag());
-      Counter<String> logScoreCounter = new Counter<String>();
+      Counter<String> logScoreCounter = new Counter<>();
       for (String tag : tagCounter.keySet()) {
         double logScore = Math.log(tagCounter.getCount(tag));
         if (!restrictTrigrams || allowedFollowingTags.isEmpty() || allowedFollowingTags.contains(tag))
@@ -495,7 +572,7 @@ public class POSTaggerTester {
     }
 
     private Set<String> allowedFollowingTags(Set<String> tags, String previousPreviousTag, String previousTag) {
-      Set<String> allowedTags = new HashSet<String>();
+      Set<String> allowedTags = new HashSet<>();
       for (String tag : tags) {
         String trigramString = makeTrigramString(previousPreviousTag, previousTag, tag);
         if (seenTagTrigrams.contains((trigramString))) {
@@ -506,7 +583,14 @@ public class POSTaggerTester {
     }
 
     private String makeTrigramString(String previousPreviousTag, String previousTag, String currentTag) {
-      return previousPreviousTag + " " + previousTag + " " + currentTag;
+      StringBuilder sb = new StringBuilder(previousPreviousTag.length() + previousTag.length() + currentTag.length() + 2);
+      sb.append(previousPreviousTag);
+      sb.append(" ");
+      sb.append(previousTag);
+      sb.append(" ");
+      sb.append(currentTag);
+
+      return sb.toString();
     }
 
     public void train(List<LabeledLocalTrigramContext> labeledLocalTrigramContexts) {
@@ -534,14 +618,213 @@ public class POSTaggerTester {
     }
   }
 
+  static class HMMTagScorer implements LocalTrigramScorer {
+
+    double trigramTagLambda;
+    double bigramTagLambda;
+    double unigramTagLambda;
+    int unknownCountCutOff;
+
+    CounterMap<String, String> wordsToTags = new CounterMap<>();
+    Counter<String> trigramTags = new Counter<>();
+    Counter<String> bigramTags = new Counter<>();
+    Counter<String> tags = new Counter<>();
+    Counter<String> unknownWordTags = new Counter<>();
+    Counter<String> unknownNumber = new Counter<>();
+    Counter<String> unknownSymbol = new Counter<>();
+    Counter<String> unknownAlphaAndSymbol = new Counter<>();
+    Counter<String> unknownDigitAndSymbol = new Counter<>();
+    Counter<String> unknownAllLetters = new Counter<>();
+    Counter<String> unknownLowerCase = new Counter<>();
+    Counter<String> unknownAlphaAndAnd = new Counter<>();
+    Counter<String> unknownAlphaAndSymbolAndDash = new Counter<>();
+    Counter<String> unknownAlphaAndDash = new Counter<>();
+    Counter<String> unknownApostropheWord = new Counter<>();
+    Counter<String> unknownApostropheAlpha = new Counter<>();
+    Counter<String> unknownNegation = new Counter<>();
+    Counter<String> unknownTwoDigitNumTags = new Counter<>();
+    Counter<String> unknownFourDigitNumTags = new Counter<>();
+    Counter<String> unknownDigitAndAlpha = new Counter<>();
+    Counter<String> unknownDigitAndDash = new Counter<>();
+    Counter<String> unknownDigitAndAlphaAndSymbolDash = new Counter<>();
+    Counter<String> unknownDigitAndSlash = new Counter<>();
+    Counter<String> unknownDigitAndForwardSlash = new Counter<>();
+    Counter<String> unknownDigitAndComma = new Counter<>();
+    Counter<String> unknownDigitAndCommaAndPeriod = new Counter<>();
+    Counter<String> unknownDigitAndPeriod = new Counter<>();
+    Counter<String> unknownWordAllCaps = new Counter<>();
+    Counter<String> unknownCapAndPeriod = new Counter<>();
+    Counter<String> unknownAbbreviation = new Counter<>();
+    Counter<String> unknownInitCap = new Counter<>();
+    Counter<String> unknownFirstWord = new Counter<>();
+    Counter<String> unknownWords = new Counter<>();
+    double totalTags;
+    double totalWords = 19; // Account for the unknown types.
+    final Set<String> seenTagTrigrams = new HashSet<>();
+    Set<String> seenTags = new HashSet<>();
+    Set<String> seenWords = new HashSet<>();
+
+
+    public int getHistorySize() {
+      return 2;
+    }
+
+    public Counter<String> getLogScoreCounter(LocalTrigramContext localTrigramContext) {
+      int position = localTrigramContext.getPosition();
+      String word = localTrigramContext.getWords().get(position);
+      Counter<String> tagCounter = GetUnknownTypeCounter(word, localTrigramContext.getPosition());
+      if (wordsToTags.keySet().contains(word)) {
+        tagCounter = wordsToTags.getCounter(word);
+      }
+      Counter<String> logScoreCounter = new Counter<>();
+      for (String tag : tagCounter.keySet()) {
+        String currentTrigram = makeTrigramString(localTrigramContext.getPreviousPreviousTag(), localTrigramContext.getPreviousTag(), tag);
+        String currentBigram = makeBigramString(localTrigramContext.getPreviousTag(), tag);
+        double trigramCount = trigramTags.getCount(currentTrigram);
+        double bigramCount = bigramTags.getCount(currentBigram);
+        double unigramCount = tags.getCount(tag);
+        double trigramProbability = bigramCount == 0 ? 0 : trigramTagLambda *(trigramCount / bigramCount);
+        double bigramProbability = unigramCount == 0 ? 0 : bigramTagLambda *(bigramCount / unigramCount);
+        double unigramProbability = unigramTagLambda *(unigramCount / totalTags);
+        double tagProbability = trigramProbability + bigramProbability + unigramProbability;
+
+        double emissionProbability = tagCounter.getCount(tag);
+        double logScore = Math.log(tagProbability * emissionProbability);
+        logScoreCounter.setCount(tag, logScore);
+      }
+      return logScoreCounter;
+    }
+
+    private String makeTrigramString(String previousPreviousTag, String previousTag, String currentTag) {
+      StringBuilder sb = new StringBuilder(previousPreviousTag.length() + previousTag.length() + currentTag.length() + 2);
+      sb.append(previousPreviousTag);
+      sb.append(" ");
+      sb.append(previousTag);
+      sb.append(" ");
+      sb.append(currentTag);
+
+      return sb.toString();
+    }
+
+    private String makeBigramString(String previousTag, String currentTag) {
+      StringBuilder sb = new StringBuilder(previousTag.length() + currentTag.length() + 1);
+      sb.append(previousTag);
+      sb.append(" ");
+      sb.append(currentTag);
+
+      return sb.toString();
+    }
+
+    private Counter<String> GetUnknownTypeCounter(String word, int pos)
+    {
+      if (pos == 0)
+        return unknownFirstWord;
+      else if (word.matches("^[^a-zA-Z0-9]+$"))
+        return unknownSymbol;
+      else if (word.matches("^'[a-zA-Z]+$"))
+        return unknownApostropheWord;
+      else if (word.matches("^[a-zA-Z]'[a-zA-Z]$"))
+        return unknownNegation;
+      else if (word.matches("^[a-zA-Z]+'[a-zA-Z]+$"))
+        return unknownApostropheAlpha;
+      else if (word.matches("^[A-Z][a-z]+$"))
+        return unknownInitCap;
+      else if (word.matches("^[A-Z]\\.$"))
+        return unknownCapAndPeriod;
+      else if (word.matches("^[a-zA-Z]{1,5}\\.([a-zA-Z]{1,1}(\\.([a-zA-Z]{1,1}(\\.([a-zA-Z]{1,1}(\\.([a-zA-Z]{1,1}(\\.)?)?)?)?)?)?)?)?$"))
+        return unknownAbbreviation;
+      else if (word.matches("^[A-Z]+$"))
+        return unknownWordAllCaps;
+      else if (word.matches("^[a-z]+$"))
+        return unknownLowerCase;
+      else if (word.matches("[a-zA-Z]+$"))
+        return unknownAllLetters;
+      else if (word.matches("[a-zA-Z\\-]+$"))
+        return unknownAlphaAndDash;
+      else if (word.matches("[a-zA-Z&]+$"))
+        return unknownAlphaAndAnd;
+      else if (word.matches("^[0-9]*\\.[0-9]+$"))
+        return unknownDigitAndPeriod;
+      else if (word.matches("^[0-9]*,[0-9]+$"))
+        return unknownDigitAndComma;
+      else if (word.matches("^[0-9]+,[0-9]+\\.[0-9]+$"))
+        return unknownDigitAndCommaAndPeriod;
+      else if (word.matches("^[0-9]{1,2}$"))
+        return unknownTwoDigitNumTags;
+      else if (word.matches("^[0-9]{1,4}$"))
+        return unknownFourDigitNumTags;
+      else if (word.matches("^[0-9]+$"))
+        return unknownNumber;
+      else if (word.matches("^[0-9\\-]+$"))
+        return unknownDigitAndDash;
+      else if (word.matches("^[0-9\\\\]+$"))
+        return unknownDigitAndSlash;
+      else if (word.matches("^[0-9/]+$"))
+        return unknownDigitAndForwardSlash;
+      else if (word.matches("^[a-zA-Z0-9]+$"))
+        return unknownDigitAndAlpha;
+      else if (word.matches("^[a-zA-Z0-9\\-]+$"))
+        return unknownAlphaAndSymbolAndDash;
+      else if (word.matches("[a-zA-Z0-9\\.'\\-]+$"))
+        return unknownDigitAndAlphaAndSymbolDash;
+      else if (word.matches("^[^0-9]+$"))
+        return unknownAlphaAndSymbol;
+      else if (word.matches("^[^a-zA-Z]+$"))
+        return unknownDigitAndSymbol;
+      else
+        return unknownWordTags;
+    }
+
+    public void train(List<LabeledLocalTrigramContext> labeledLocalTrigramContexts) {
+      // collect word-tag counts
+      for (LabeledLocalTrigramContext labeledLocalTrigramContext : labeledLocalTrigramContexts) {
+        String word = labeledLocalTrigramContext.getCurrentWord();
+        String tag = labeledLocalTrigramContext.getCurrentTag();
+        if (!seenWords.contains(word) || unknownWords.getCount(word) < unknownCountCutOff) {
+          // word is currently unknown, so tally its tag in the unknown tag counter
+          Counter<String> unknownTypeCounter = GetUnknownTypeCounter(word, labeledLocalTrigramContext.getPosition());
+          unknownTypeCounter.incrementCount(tag, 1.0);
+          unknownWords.incrementCount(word, 1.0);
+        }
+        String trigramStringTags = makeTrigramString(labeledLocalTrigramContext.getPreviousPreviousTag(), labeledLocalTrigramContext.getPreviousTag(), labeledLocalTrigramContext.getCurrentTag());
+        String bigramStringTags = makeBigramString(labeledLocalTrigramContext.getPreviousTag(), labeledLocalTrigramContext.getCurrentTag());
+
+        wordsToTags.incrementCount(word, tag, 1.0);
+        trigramTags.incrementCount(trigramStringTags, 1.0);
+        bigramTags.incrementCount(bigramStringTags, 1.0);
+        tags.incrementCount(tag, 1.0);
+        seenTagTrigrams.add(trigramStringTags);
+        seenTags.add(tag);
+        seenWords.add(word);
+        totalTags++;
+        totalWords++;
+      }
+    }
+
+    public void validate(List<LabeledLocalTrigramContext> labeledLocalTrigramContexts) {
+      // no tuning for this dummy model!
+    }
+
+    public HMMTagScorer() {
+      this(0.6, 0.25, 0.15, 5);
+    }
+
+    public HMMTagScorer(double trigramTagLambda, double bigramTagLambda, double unigramTagLambda, int unknownCountCutOff) {
+      this.trigramTagLambda = trigramTagLambda;
+      this.bigramTagLambda = bigramTagLambda;
+      this.unigramTagLambda = unigramTagLambda;
+      this.unknownCountCutOff = unknownCountCutOff;
+    }
+  }
+
   private static List<TaggedSentence> readTaggedSentences(String path, int low, int high) {
     Collection<Tree<String>> trees = PennTreebankReader.readTrees(path, low, high);
-    List<TaggedSentence> taggedSentences = new ArrayList<TaggedSentence>();
+    List<TaggedSentence> taggedSentences = new ArrayList<>();
     Trees.TreeTransformer<String> treeTransformer = new Trees.EmptyNodeStripper();
     for (Tree<String> tree : trees) {
       tree = treeTransformer.transformTree(tree);
-      List<String> words = new BoundedList<String>(new ArrayList<String>(tree.getYield()), START_WORD, STOP_WORD);
-      List<String> tags = new BoundedList<String>(new ArrayList<String>(tree.getPreTerminalYield()), START_TAG, STOP_TAG);
+      List<String> words = new BoundedList<>(new ArrayList<>(tree.getYield()), START_WORD, STOP_WORD);
+      List<String> tags = new BoundedList<>(new ArrayList<>(tree.getPreTerminalYield()), START_TAG, STOP_TAG);
       taggedSentences.add(new TaggedSentence(words, tags));
     }
     return taggedSentences;
@@ -619,7 +902,7 @@ public class POSTaggerTester {
   }
 
   private static Set<String> extractVocabulary(List<TaggedSentence> taggedSentences) {
-    Set<String> vocabulary = new HashSet<String>();
+    Set<String> vocabulary = new HashSet<>();
     for (TaggedSentence taggedSentence : taggedSentences) {
       List<String> words = taggedSentence.getWords();
       vocabulary.addAll(words);
@@ -671,9 +954,11 @@ public class POSTaggerTester {
 
     // Construct tagger components
     // TODO : improve on the MostFrequentTagScorer
-    LocalTrigramScorer localTrigramScorer = new MostFrequentTagScorer(false);
+    //LocalTrigramScorer localTrigramScorer = new MostFrequentTagScorer(false);
+    LocalTrigramScorer localTrigramScorer = new HMMTagScorer();
     // TODO : improve on the GreedyDecoder
-    TrellisDecoder<State> trellisDecoder = new GreedyDecoder<State>();
+    //TrellisDecoder<State> trellisDecoder = new GreedyDecoder<>();
+    TrellisDecoder<State> trellisDecoder = new ViterbiDecoder<>();
 
     // Train tagger
     POSTagger posTagger = new POSTagger(localTrigramScorer, trellisDecoder);

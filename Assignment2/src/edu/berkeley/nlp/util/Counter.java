@@ -123,12 +123,12 @@ public class Counter <E> implements Serializable {
   }
 
   public <T extends E> void elementwiseMax(Counter<T> counter) {
-	  for (T key : counter.keySet()) {
-		  double count = counter.getCount(key);
-		  if ( getCount(key) < count ) {
-			  setCount(key, count);
-		  }
-	  }
+      for (T key : counter.keySet()) {
+          double count = counter.getCount(key);
+          if ( getCount(key) < count ) {
+              setCount(key, count);
+          }
+      }
   }
   
   /**
@@ -225,7 +225,7 @@ public class Counter <E> implements Serializable {
    * @return entrySet
    */
   public Set<Entry<E, Double>> getEntrySet() {
-	return entries.entrySet();
+    return entries.entrySet();
   }
 
   public Counter() {

@@ -63,24 +63,24 @@ public class Counters {
    * @return
    */
   public static<E> double jensenShannonDivergence(Counter<E> x, Counter<E> y) {
-	  double sum = 0.0;
-	  double xTotal = x.totalCount();
-	  double yTotal = y.totalCount();
-	  for (E key: x.keySet()) {
-		//x -> x+y/2
-		double xVal = x.getCount(key) / xTotal;
-		double yVal = y.getCount(key) / yTotal;
-		double avg = 0.5 * (xVal + yVal);
-		sum += xVal * Math.log(xVal / avg);
-	  }
-	  for (E key: y.keySet()) {
-			//y -> x+y/2
-			double xVal = x.getCount(key)/ xTotal ;
-			double yVal = y.getCount(key) / yTotal;
-			double avg = 0.5 * (xVal + yVal);
-			sum += yVal * Math.log(yVal / avg);
-	  }
-	  return sum / 0.5;
+      double sum = 0.0;
+      double xTotal = x.totalCount();
+      double yTotal = y.totalCount();
+      for (E key: x.keySet()) {
+        //x -> x+y/2
+        double xVal = x.getCount(key) / xTotal;
+        double yVal = y.getCount(key) / yTotal;
+        double avg = 0.5 * (xVal + yVal);
+        sum += xVal * Math.log(xVal / avg);
+      }
+      for (E key: y.keySet()) {
+            //y -> x+y/2
+            double xVal = x.getCount(key)/ xTotal ;
+            double yVal = y.getCount(key) / yTotal;
+            double avg = 0.5 * (xVal + yVal);
+            sum += yVal * Math.log(yVal / avg);
+      }
+      return sum / 0.5;
   }
  
   /**
@@ -92,33 +92,33 @@ public class Counters {
    * @return dotProduct 
    */
   public static <E> double dotProduct(Counter<E> x, Counter<E> y) {
-  	  double total = 0.0;
-  		for (E keyX: x.keySet()){
-  	  	  total += x.getCount(keyX) * y.getCount(keyX);
-  	  }
-  		return total;
+      double total = 0.0;
+        for (E keyX: x.keySet()){
+          total += x.getCount(keyX) * y.getCount(keyX);
+      }
+        return total;
   }
   
   private static final Random random = new Random();
   
   public static <E> E sample(Counter<E> counter) {
-	  double total = counter.totalCount();
-	  double rand = random.nextDouble();
-	  double sum = 0.0;
-	  if (total <= 0.0) {
-		  throw new RuntimeException("Non-positive counter total: " + total);
-	  }
-	  for (E key: counter.keySet()) {
-		  double count = counter.getCount(key);
-		  if (count < 0.0) {
-			  throw new RuntimeException("Negative count in counter: " + key + " => " + count);
-		  }
-		  double prob = count / total;		  
-		  sum += prob;
-		  if (rand < sum) {
-			  return key;
-		  }
-	  }
-	  throw new RuntimeException("Shouldn't Reach Here");
+      double total = counter.totalCount();
+      double rand = random.nextDouble();
+      double sum = 0.0;
+      if (total <= 0.0) {
+          throw new RuntimeException("Non-positive counter total: " + total);
+      }
+      for (E key: counter.keySet()) {
+          double count = counter.getCount(key);
+          if (count < 0.0) {
+              throw new RuntimeException("Negative count in counter: " + key + " => " + count);
+          }
+          double prob = count / total;
+          sum += prob;
+          if (rand < sum) {
+              return key;
+          }
+      }
+      throw new RuntimeException("Shouldn't Reach Here");
   }
 }
