@@ -281,7 +281,7 @@ public class POSTaggerTester {
       piCache = new CounterMap<>();
       bpCache = new HashMap<>();
       S currentState = trellis.getStartState();
-      piCache.setCount(0, currentState, 1.0);
+      piCache.setCount(0, currentState, 0.0);
       int pos = 0;
       transitionQueue.put(pos, new HashSet<S>());
       transitionQueue.get(pos).add(currentState);
@@ -307,8 +307,10 @@ public class POSTaggerTester {
         pos++;
       }
 
-      currentState = trellis.getEndState();
-      for (int i = pos - 1; i > 0; i--)
+      states.add(currentState);
+      currentState = bpCache.get(pos - 1).getCounter(currentState).argMax();
+      states.add(currentState);
+      for (int i = pos - 2; i > 0; i--)
       {
         states.add(0, bpCache.get(i).getCounter(currentState).argMax());
         currentState = states.get(0);
@@ -330,9 +332,11 @@ public class POSTaggerTester {
       Counter<S> backwardTransitions = trellis.getBackwardTransitions(state);
       for (S previousState : backwardTransitions.keySet())
       {
-        double previousPi = GetPi(pos - 1, previousState, trellis) * backwardTransitions.getCount(previousState);
-        if (previousPi > max) {
-          max = previousPi;
+        double previousPi = GetPi(pos - 1, previousState, trellis);
+        double previousProb = backwardTransitions.getCount(previousState);
+        double previousStateProb = previousPi + previousProb;
+        if (previousStateProb > max) {
+          max = previousStateProb;
           maxPreviousState = previousState;
         }
       }
