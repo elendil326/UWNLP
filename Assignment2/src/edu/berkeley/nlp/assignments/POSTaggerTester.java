@@ -326,14 +326,14 @@ public class POSTaggerTester {
       }
 
       double max = Double.NEGATIVE_INFINITY;
-      S maxState = null;
+      S maxPreviousState = null;
       Counter<S> backwardTransitions = trellis.getBackwardTransitions(state);
       for (S previousState : backwardTransitions.keySet())
       {
         double previousPi = GetPi(pos - 1, previousState, trellis) * backwardTransitions.getCount(previousState);
         if (previousPi > max) {
           max = previousPi;
-          maxState = previousState;
+          maxPreviousState = previousState;
         }
       }
 
@@ -342,7 +342,7 @@ public class POSTaggerTester {
       {
         bpCache.put(pos, new CounterMap<S, S>());
       }
-      bpCache.get(pos).setCount(state, maxState, max);
+      bpCache.get(pos).setCount(state, maxPreviousState, max);
 
       return max;
     }
