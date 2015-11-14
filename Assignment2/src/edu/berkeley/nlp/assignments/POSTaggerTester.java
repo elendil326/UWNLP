@@ -271,29 +271,53 @@ public class POSTaggerTester {
     }
   }
 
+
+  /**
+   * The ViterbiDecoder class executes the Vierbi
+   * algorithm to track the best path on a Trellis.
+   * @param <S>
+   * The type of State used in the Trellis.
+   */
   static class ViterbiDecoder <S> implements TrellisDecoder<S> {
+    // Stores the values of Pi for each state in a given position
     CounterMap<Integer, S> piCache = new CounterMap<>();
+    // Stores the back pointer for each position and state
     Map<Integer, CounterMap<S, S>> bpCache = new HashMap<>();
+    // Emulates a queue to store the states to visit in a given position
     Map<Integer, Set<S>> transitionQueue = new HashMap<>();
 
+
+    /**
+     * Gets the best path given a Trellis
+     * @param trellis
+     * The trellis containing the probabilities of each state
+     * @return
+     * The best path across the trellis considering the previous states.
+     */
     public List<S> getBestPath(Trellis<S> trellis) {
-      List<S> states = new ArrayList<>();
       piCache = new CounterMap<>();
       bpCache = new HashMap<>();
       S currentState = trellis.getStartState();
+
+      // Initialize the START state with 0, since we expect Trellis to be in log space.
       piCache.setCount(0, currentState, 0.0);
       int pos = 0;
+      // Add to the queue the first position to traverse.
       transitionQueue.put(pos, new HashSet<S>());
       transitionQueue.get(pos).add(currentState);
       while (true) {
+        // If no state has been enqueued for the current position, or if we have reached the end state, stop analyzing.
         if (!transitionQueue.containsKey(pos) || currentState.equals(trellis.getEndState()))
           break;
 
+        // Dequeue the transitions of the current position and calculate pi for each one.
         for (S state : transitionQueue.get(pos)) {
           currentState = state;
+          // No need to analyze the end state, as it will always be at the end.
           if (currentState.equals(trellis.getEndState()))
             break;
 
+          // Get the PI of the forward transitions and enqueue them so we know which transitions to continue on.
           Counter<S> forwardTransitions = trellis.getForwardTransitions(currentState);
           for (S nextState : forwardTransitions.keySet()) {
             GetPi(pos + 1, nextState, trellis);
@@ -307,6 +331,10 @@ public class POSTaggerTester {
         pos++;
       }
 
+      // After populating all PIs, and the backpointer, traverse it to get the best path.
+      List<S> states = new ArrayList<>();
+
+      // The current state is the end state, this is always at the end, so add it by default.
       states.add(currentState);
       currentState = bpCache.get(pos - 1).getCounter(currentState).argMax();
       states.add(currentState);
@@ -319,8 +347,22 @@ public class POSTaggerTester {
       return states;
     }
 
+    /**
+     * Gets the max probability of the current state given the
+     * previous states.
+     * @param pos
+     * The current position in the sentence
+     * @param state
+     * The current state
+     * @param trellis
+     * The trellis with all possible paths and associated weights
+     * @return
+     * The max probability of the current state given the
+     * previous state.
+     */
     public double GetPi(int pos, S state, Trellis<S> trellis)
     {
+      // If we already now PI for this state in this position, return it.
       if (piCache.containsKey(pos))
       {
         if (piCache.getCounter(pos).containsKey(state))
@@ -329,19 +371,28 @@ public class POSTaggerTester {
 
       double max = Double.NEGATIVE_INFINITY;
       S maxPreviousState = null;
+
+      // Calculate the current PI based on the previous PI of each state
       Counter<S> backwardTransitions = trellis.getBackwardTransitions(state);
       for (S previousState : backwardTransitions.keySet())
       {
         double previousPi = GetPi(pos - 1, previousState, trellis);
         double previousProb = backwardTransitions.getCount(previousState);
+
+        // Add instead of multiply, since probabilities in Trellis are already in Log space
         double previousStateProb = previousPi + previousProb;
+
+        // Keep track of the max prob and max argument.
         if (previousStateProb > max) {
           max = previousStateProb;
           maxPreviousState = previousState;
         }
       }
 
+      // Store the calculated Pi in the current position.
       piCache.setCount(pos, state, max);
+
+      // Store the Arg max for the current state in the current position.
       if (!bpCache.containsKey(pos))
       {
         bpCache.put(pos, new CounterMap<S, S>());
@@ -622,17 +673,35 @@ public class POSTaggerTester {
     }
   }
 
+  /**
+   * The HMMTagScorer gives each test word the multiplication of the
+   * probability of seen this tag given the preceding two tags, and the
+   * probablilty of seen the test word given the current tag. If the test word
+   * was not seen during training, it is associated with the most common tag
+   * seen against the same word type (all digits, all letters, all caps, etc).
+   *
+   * This tagger uses linear interpolation to smooth the unseen trigram tags.
+   */
   static class HMMTagScorer implements LocalTrigramScorer {
 
+    // Used to store the values of the lambdas of the linear interpolation.
     double trigramTagLambda;
     double bigramTagLambda;
     double unigramTagLambda;
+
+    // Cut off value for low frequent words. Words that appear less than the cut off
+    // value are considered low frequent words.
     int unknownCountCutOff;
 
+    // Stores the mapping between how many times a tag appeared against a given word. [word -> (tag -> count)]
     CounterMap<String, String> wordsToTags = new CounterMap<>();
+
+    // Count the trigram, bigrams and unigrams in the training set.
     Counter<String> trigramTags = new Counter<>();
     Counter<String> bigramTags = new Counter<>();
     Counter<String> tags = new Counter<>();
+
+    // Count the tags seen in the types of infrequent words.
     Counter<String> unknownWordTags = new Counter<>();
     Counter<String> unknownNumber = new Counter<>();
     Counter<String> unknownSymbol = new Counter<>();
@@ -641,7 +710,7 @@ public class POSTaggerTester {
     Counter<String> unknownAllLetters = new Counter<>();
     Counter<String> unknownLowerCase = new Counter<>();
     Counter<String> unknownAlphaAndAnd = new Counter<>();
-    Counter<String> unknownAlphaAndSymbolAndDash = new Counter<>();
+    Counter<String> unknownAlphaAndDigitAndDash = new Counter<>();
     Counter<String> unknownAlphaAndDash = new Counter<>();
     Counter<String> unknownApostropheWord = new Counter<>();
     Counter<String> unknownApostropheAlpha = new Counter<>();
@@ -662,43 +731,86 @@ public class POSTaggerTester {
     Counter<String> unknownInitCap = new Counter<>();
     Counter<String> unknownFirstWord = new Counter<>();
     Counter<String> unknownWords = new Counter<>();
+
+    // Store the total number of words and tags seen during training.
     double totalTags;
-    double totalWords = 19; // Account for the unknown types.
-    final Set<String> seenTagTrigrams = new HashSet<>();
-    Set<String> seenTags = new HashSet<>();
+    double totalWords;
+
+    // Stores unique words seen. This is used ot identify unknown words.
     Set<String> seenWords = new HashSet<>();
 
 
-    public int getHistorySize() {
-      return 2;
-    }
-
+    /**
+     * Scores each of the tags seen in training associated to the
+     * localTrigramContext with a smoothed probability and returns
+     * the mapping of each tag and its score.
+     * @param localTrigramContext
+     * The LocalTrigramContext to score.
+     * @return
+     * The Map between the possible tags and the probability in log space
+     * to be associated to the word in the current position given the previous
+     * two tags of the LocalTrigramContext.
+     */
     public Counter<String> getLogScoreCounter(LocalTrigramContext localTrigramContext) {
       int position = localTrigramContext.getPosition();
       String word = localTrigramContext.getWords().get(position);
-      Counter<String> tagCounter = GetUnknownTypeCounter(word, localTrigramContext.getPosition());
+
+      // If the word is known, initialize it with the Map of tags seen during training.
+      Counter<String> tagCounter;
       if (wordsToTags.keySet().contains(word)) {
         tagCounter = wordsToTags.getCounter(word);
       }
+      // else, initialize it with its corresponding unknown type map.
+      else {
+        tagCounter = GetUnknownTypeCounter(word, localTrigramContext.getPosition());
+      }
+
+      // Used to store the log probability of each possible tag.
       Counter<String> logScoreCounter = new Counter<>();
+
+      // For each tag seem during training associated with the current word, calculate the
+      // smoothed probability.
       for (String tag : tagCounter.keySet()) {
         String currentTrigram = makeTrigramString(localTrigramContext.getPreviousPreviousTag(), localTrigramContext.getPreviousTag(), tag);
         String currentBigram = makeBigramString(localTrigramContext.getPreviousTag(), tag);
         double trigramCount = trigramTags.getCount(currentTrigram);
         double bigramCount = bigramTags.getCount(currentBigram);
         double unigramCount = tags.getCount(tag);
+
+        // Avoid NaN by returning zero when the denominator is zero.
         double trigramProbability = bigramCount == 0 ? 0 : trigramTagLambda *(trigramCount / bigramCount);
         double bigramProbability = unigramCount == 0 ? 0 : bigramTagLambda *(bigramCount / unigramCount);
         double unigramProbability = unigramTagLambda *(unigramCount / totalTags);
+
+        // Smoothed probability of the tag
         double tagProbability = trigramProbability + bigramProbability + unigramProbability;
 
-        double emissionProbability = tagCounter.getCount(tag);
+        // Probability of the emission given the tag.
+        double emissionProbability = tagCounter.getCount(tag) / totalTags;
+
+        // Probability Formula.
         double logScore = Math.log(tagProbability * emissionProbability);
+
+        // Store the probability of the tag.
         logScoreCounter.setCount(tag, logScore);
       }
+
+      // Return the built mapping
       return logScoreCounter;
     }
 
+
+    /**
+     * Makes a trigram string based on the tags passed in the constructor.
+     * @param previousPreviousTag
+     * The previous to the previous tag
+     * @param previousTag
+     * The previous tag
+     * @param currentTag
+     * The current tag
+     * @return
+     * The trigram string with the tags concatenated by white spaces
+     */
     private String makeTrigramString(String previousPreviousTag, String previousTag, String currentTag) {
       StringBuilder sb = new StringBuilder(previousPreviousTag.length() + previousTag.length() + currentTag.length() + 2);
       sb.append(previousPreviousTag);
@@ -710,6 +822,15 @@ public class POSTaggerTester {
       return sb.toString();
     }
 
+    /**
+     * Makes a bigram string based on the tags passed.
+     * @param previousTag
+     * The previous tag
+     * @param currentTag
+     * The current tag
+     * @return
+     * The bigram string with the tags concatenated by white spaces
+     */
     private String makeBigramString(String previousTag, String currentTag) {
       StringBuilder sb = new StringBuilder(previousTag.length() + currentTag.length() + 1);
       sb.append(previousTag);
@@ -719,6 +840,15 @@ public class POSTaggerTester {
       return sb.toString();
     }
 
+    /**
+     * Gets the Map of the corresponding unknown word
+     * @param word
+     * The unknown word
+     * @param pos
+     * The position of the word in the sentence
+     * @return
+     * The Map of the unknown word type.
+     */
     private Counter<String> GetUnknownTypeCounter(String word, int pos)
     {
       if (pos == 0)
@@ -768,7 +898,7 @@ public class POSTaggerTester {
       else if (word.matches("^[a-zA-Z0-9]+$"))
         return unknownDigitAndAlpha;
       else if (word.matches("^[a-zA-Z0-9\\-]+$"))
-        return unknownAlphaAndSymbolAndDash;
+        return unknownAlphaAndDigitAndDash;
       else if (word.matches("[a-zA-Z0-9\\.'\\-]+$"))
         return unknownDigitAndAlphaAndSymbolDash;
       else if (word.matches("^[^0-9]+$"))
@@ -779,17 +909,23 @@ public class POSTaggerTester {
         return unknownWordTags;
     }
 
+    /**
+     * Trains the score tagger.
+     * @param labeledLocalTrigramContexts
+     * The TrigramContext with the current word, tag, and previous tags
+     */
     public void train(List<LabeledLocalTrigramContext> labeledLocalTrigramContexts) {
       // collect word-tag counts
       for (LabeledLocalTrigramContext labeledLocalTrigramContext : labeledLocalTrigramContexts) {
         String word = labeledLocalTrigramContext.getCurrentWord();
         String tag = labeledLocalTrigramContext.getCurrentTag();
         if (!seenWords.contains(word) || unknownWords.getCount(word) < unknownCountCutOff) {
-          // word is currently unknown, so tally its tag in the unknown tag counter
+          // word is currently unknown or infrequent, so tally its tag in the corresponding unknown tag counter
           Counter<String> unknownTypeCounter = GetUnknownTypeCounter(word, labeledLocalTrigramContext.getPosition());
           unknownTypeCounter.incrementCount(tag, 1.0);
           unknownWords.incrementCount(word, 1.0);
         }
+        // Make the trigrams and bigrams to store the count.
         String trigramStringTags = makeTrigramString(labeledLocalTrigramContext.getPreviousPreviousTag(), labeledLocalTrigramContext.getPreviousTag(), labeledLocalTrigramContext.getCurrentTag());
         String bigramStringTags = makeBigramString(labeledLocalTrigramContext.getPreviousTag(), labeledLocalTrigramContext.getCurrentTag());
 
@@ -797,8 +933,6 @@ public class POSTaggerTester {
         trigramTags.incrementCount(trigramStringTags, 1.0);
         bigramTags.incrementCount(bigramStringTags, 1.0);
         tags.incrementCount(tag, 1.0);
-        seenTagTrigrams.add(trigramStringTags);
-        seenTags.add(tag);
         seenWords.add(word);
         totalTags++;
         totalWords++;
@@ -806,13 +940,20 @@ public class POSTaggerTester {
     }
 
     public void validate(List<LabeledLocalTrigramContext> labeledLocalTrigramContexts) {
-      // no tuning for this dummy model!
+      // no tuning here, tuning happens in the gridSearch to allow for multiple values of lambda
     }
 
-    public HMMTagScorer() {
-      this(0.6, 0.25, 0.15, 5);
-    }
-
+    /**
+     * Creates a new instance of the HMMTagScorer class
+     * @param trigramTagLambda
+     * The lambda to use for the probabilities of the trigrams
+     * @param bigramTagLambda
+     * The lambda to use for the probability of the bigrams
+     * @param unigramTagLambda
+     * The lambda to use for the probability of the unigrams
+     * @param unknownCountCutOff
+     * The amount of times a word needs to be seen to consider it infrequent
+     */
     public HMMTagScorer(double trigramTagLambda, double bigramTagLambda, double unigramTagLambda, int unknownCountCutOff) {
       this.trigramTagLambda = trigramTagLambda;
       this.bigramTagLambda = bigramTagLambda;
@@ -821,7 +962,7 @@ public class POSTaggerTester {
     }
   }
 
-  private static List<TaggedSentence> readTaggedSentences(String path, int low, int high) {
+  public static List<TaggedSentence> readTaggedSentences(String path, int low, int high) {
     Collection<Tree<String>> trees = PennTreebankReader.readTrees(path, low, high);
     List<TaggedSentence> taggedSentences = new ArrayList<>();
     Trees.TreeTransformer<String> treeTransformer = new Trees.EmptyNodeStripper();
@@ -834,7 +975,7 @@ public class POSTaggerTester {
     return taggedSentences;
   }
 
-  private static void evaluateTagger(POSTagger posTagger, List<TaggedSentence> taggedSentences, Set<String> trainingVocabulary, boolean verbose) {
+  public static void evaluateTagger(POSTagger posTagger, List<TaggedSentence> taggedSentences, Set<String> trainingVocabulary, boolean verbose) {
     double numTags = 0.0;
     double numTagsCorrect = 0.0;
     double numUnknownWords = 0.0;
@@ -866,6 +1007,9 @@ public class POSTaggerTester {
       if (verbose) System.out.println(alignedTaggings(words, goldTags, guessedTags, true) + "\n");
     }
     System.out.println("Tag Accuracy: " + (numTagsCorrect / numTags) + " (Unknown Accuracy: " + (numUnknownWordsCorrect / numUnknownWords) + ")  Decoder Suboptimalities Detected: " + numDecodingInversions);
+    latestTotalPercentage = (numTagsCorrect / numTags);
+    latestUnknownPercentage = (numUnknownWordsCorrect / numUnknownWords);
+    latestSubOptimalities = numDecodingInversions;
   }
 
   // pretty-print a pair of taggings for a sentence, possibly suppressing the tags which correctly match
@@ -905,7 +1049,7 @@ public class POSTaggerTester {
     }
   }
 
-  private static Set<String> extractVocabulary(List<TaggedSentence> taggedSentences) {
+  public static Set<String> extractVocabulary(List<TaggedSentence> taggedSentences) {
     Set<String> vocabulary = new HashSet<>();
     for (TaggedSentence taggedSentence : taggedSentences) {
       List<String> words = taggedSentence.getWords();
@@ -914,9 +1058,33 @@ public class POSTaggerTester {
     return vocabulary;
   }
 
+  public static double GetLatestTotalPercentage()
+  {
+    return latestTotalPercentage;
+  }
+
+  public static double GetLatestUnknownPercentage()
+  {
+    return latestUnknownPercentage;
+  }
+
+  public static int GetLatestSubOptimalities()
+  {
+    return latestSubOptimalities;
+  }
+
+  public static double latestTotalPercentage = 0;
+  public static double latestUnknownPercentage = 0;
+  public static int latestSubOptimalities = 0;
+
   public static void main(String[] args) {
     // Parse command line flags and arguments
     Map<String, String> argMap = CommandLineUtils.simpleCommandLineParser(args);
+    double hmmTrigramLambda = 0.8;
+    double hmmBigramLambda = 0.15;
+    double hmmUnigramLambda = 0.05;
+    int hmmUncommonWordsCutOff = 5;
+    String hmmArguments;
 
     // Set up default parameters and settings
     String basePath = ".";
@@ -944,6 +1112,23 @@ public class POSTaggerTester {
       verbose = true;
     }
 
+    if (argMap.containsKey("-hmmArguments"))
+    {
+      hmmArguments = argMap.get("-hmmArguments");
+      String[] arguments = hmmArguments.split(";");
+      if (arguments.length < 4)
+      {
+        System.out.println("No enough Hmm arguments, ignoring input.");
+      }
+      else
+      {
+        hmmTrigramLambda = Double.parseDouble(arguments[0]);
+        hmmBigramLambda = Double.parseDouble(arguments[1]);
+        hmmUnigramLambda = Double.parseDouble(arguments[2]);
+        hmmUncommonWordsCutOff = Integer.parseInt(arguments[3]);
+      }
+    }
+
     // Read in data
     System.out.print("Loading training sentences...");
     List<TaggedSentence> trainTaggedSentences = readTaggedSentences(basePath, 200, 2199);
@@ -959,7 +1144,7 @@ public class POSTaggerTester {
     // Construct tagger components
     // TODO : improve on the MostFrequentTagScorer
     //LocalTrigramScorer localTrigramScorer = new MostFrequentTagScorer(false);
-    LocalTrigramScorer localTrigramScorer = new HMMTagScorer();
+    LocalTrigramScorer localTrigramScorer = new HMMTagScorer(hmmTrigramLambda, hmmBigramLambda, hmmUnigramLambda, hmmUncommonWordsCutOff);
     // TODO : improve on the GreedyDecoder
     //TrellisDecoder<State> trellisDecoder = new GreedyDecoder<>();
     TrellisDecoder<State> trellisDecoder = new ViterbiDecoder<>();
