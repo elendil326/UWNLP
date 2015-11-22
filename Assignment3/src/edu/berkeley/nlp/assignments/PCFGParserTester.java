@@ -6,7 +6,9 @@ import edu.berkeley.nlp.ling.Trees;
 import edu.berkeley.nlp.parser.EnglishPennTreebankParseEvaluator;
 import edu.berkeley.nlp.util.*;
 
+import java.lang.reflect.Array;
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Harness for PCFG Parser project.
@@ -148,105 +150,209 @@ public class PCFGParserTester {
   static class CKYParser implements Parser {
     Map<Integer, CounterMap<Integer, String>> pi;
     Map<Integer, CounterMap<Integer, String>> piUnary;
+    Map<Integer, CounterMap<Integer, String>> piBinary;
+    Map<Integer, HashMap<Integer, HashMap<String, UnaryRule>>> bpPi;
+    Map<Integer, HashMap<Integer, HashMap<String, UnaryRule>>> bpUnary;
+    Map<Integer, HashMap<Integer, HashMap<String, BinaryRule>>> bpBinary;
     Lexicon lexicon;
     Grammar grammar;
     UnaryClosure uc;
 
 
     public Tree<String> getBestParse(List<String> sentence) {
-      Tree<String> annotatedBestParse = null;
+      pi = new HashMap<>();
+      bpPi = new HashMap<>();
+      piUnary = new HashMap<>();
+      piBinary = new HashMap<>();
+      bpUnary = new HashMap<>();
+      bpBinary = new HashMap<>();
 
       // Initialize PIs
       for (int i = 1; i < sentence.size() + 1; i++)
       {
         pi.put(i, new CounterMap<Integer, String>());
+        bpPi.put(i, new HashMap<Integer, HashMap<String, UnaryRule>>());
+        piBinary.put(i, new CounterMap<Integer, String>());
+        bpBinary.put(i, new HashMap<Integer, HashMap<String, BinaryRule>>());
         // Step 1
-        for (BinaryRule binaryRule : grammar.getBinaryRules())
+        // Since the grammar doesn't have terminals, initialize all non-terminals with 0
+        // but the tags found by the lexicon.
+        //for (BinaryRule binaryRule : grammar.getBinaryRules())
+        //{
+        //  pi.get(i).setCount(i, binaryRule.getParent(), 0);
+        //}
+        //for (UnaryRule unaryRule : grammar.getUnaryRules())
+        //{
+        //  pi.get(i).setCount(i, unaryRule.getParent(), 0);
+        //}
+        for (String tag : lexicon.getAllTags())
         {
-          pi.get(i).setCount(i, binaryRule.getParent(), 0);
-        }
-        for (UnaryRule unaryRule : grammar.getUnaryRules())
-        {
-          if (Objects.equals(unaryRule.getParent(), sentence.get(i - 1)))
-          {
-            pi.get(i).setCount(i, unaryRule.getParent(), unaryRule.getScore());
+          if (lexicon.scoreTagging(sentence.get(i - 1), tag) > 0) {
+            pi.get(i).setCount(i, tag, lexicon.scoreTagging(sentence.get(i - 1), tag));
+            UnaryRule preTerminal = new UnaryRule(tag, sentence.get(i - 1));
+            if (!bpPi.get(i).containsKey(i))
+            {
+              bpPi.get(i).put(i, new HashMap<String, UnaryRule>());
+            }
+            bpPi.get(i).get(i).put(preTerminal.getParent(), preTerminal);
           }
         }
 
         // Step 2
-        for (UnaryRule unaryRule : grammar.getUnaryRules())
+        // Initialize all non-terminals with 0 but the ones
+        // that produce the tags. Since all of them are 0 in
+        // the pi Map, the max are the ones that produce the tags.
+        piUnary.put(i, new CounterMap<Integer, String>());
+        bpUnary.put(i, new HashMap<Integer, HashMap<String, UnaryRule>>());
+        //for (BinaryRule binaryRule : grammar.getBinaryRules())
+        //{
+        //  piUnary.get(i).setCount(i, binaryRule.getParent(), 0);
+        //}
+        //for (UnaryRule unaryRule : grammar.getUnaryRules())
+        //{
+        //  piUnary.get(i).setCount(i, unaryRule.getParent(), 0);
+        //}
+        for (String tag : lexicon.getAllTags())
         {
-          // If we already have the max of this non-terminal, ignore it.
-          if (piUnary.get(i).containsKey(i) && piUnary.get(i).getCounter(i).containsKey(unaryRule.getParent()))
-          {
+          if (!pi.get(i).getCounter(i).containsKey(tag)) {
             continue;
           }
 
-          double maxScore = 0;
-          for (UnaryRule unaryRuleClosure : uc.getClosedUnaryRulesByParent(unaryRule.getParent()))
+          for (UnaryRule unaryRuleClosed : uc.getClosedUnaryRulesByChild(tag))
           {
-            double score = unaryRuleClosure.getScore() * pi.get(i).getCount(i, unaryRuleClosure.getChild());
-            if (score > maxScore) {
-              maxScore = score;
+            piUnary.get(i).setCount(i, unaryRuleClosed.getParent(), unaryRuleClosed.getScore() * pi.get(i).getCount(i, tag));
+            if (!bpUnary.get(i).containsKey(i))
+            {
+              bpUnary.get(i).put(i, new HashMap<String, UnaryRule>());
             }
+            bpUnary.get(i).get(i).put(unaryRuleClosed.getParent(), unaryRuleClosed);
           }
-          piUnary.put(i, new CounterMap<Integer, String>());
-          piUnary.get(i).setCount(i, unaryRule.getParent(), maxScore);
+          UnaryRule preTerminal = new UnaryRule(tag, sentence.get(i - 1));
+          preTerminal.setScore(pi.get(i).getCount(i, tag));
+          piUnary.get(i).setCount(i, preTerminal.getParent(), preTerminal.getScore());
+          if (!bpUnary.get(i).containsKey(i))
+          {
+            bpUnary.get(i).put(i, new HashMap<String, UnaryRule>());
+          }
+          bpUnary.get(i).get(i).put(preTerminal.getParent(), preTerminal);
+
         }
       }
 
       // Iterate through all phrase lengths
-      for (int l = 1; l < sentence.size() - 2; l++)
+      for (int l = 1; l < sentence.size(); l++)
       {
         // Iterate through all phrases of length l
-        for (int i = 1, j = i + l; i < sentence.size() - l; i++, j++)
+        for (int i = 1, j = i + l; i < sentence.size() + 1 - l; i++, j++)
         {
           // Step 1 (Binary)
-          for (BinaryRule binaryRule : grammar.getBinaryRules())
+          for (String parent : grammar.binaryRulesByParent.keySet())
           {
-            // If we already have the max of this non-terminal, ignore it.
-            if (pi.get(i).containsKey(j) && pi.get(i).getCounter(j).containsKey(binaryRule.getParent()))
-            {
-              continue;
-            }
 
             double maxScore = 0;
-            for (BinaryRule binaryRuleX : grammar.getBinaryRulesByParent(binaryRule.getParent()))
+            BinaryRule maxArg = null;
+            for (BinaryRule binaryRuleX : grammar.getBinaryRulesByParent(parent))
             {
-              for (int s = i; s < j - 1; s++) {
+              for (int s = i; s < j; s++) {
+                if (!piUnary.get(i).getCounter(s).containsKey(binaryRuleX.getLeftChild())
+                        || !piUnary.get(s + 1).getCounter(j).containsKey(binaryRuleX.getRightChild()))
+                {
+                  continue;
+                }
+
                 double score = binaryRuleX.getScore() * piUnary.get(i).getCount(s, binaryRuleX.getLeftChild()) * piUnary.get(s + 1).getCount(j, binaryRuleX.getRightChild());
                 if (score > maxScore) {
                   maxScore = score;
+
+                  // Copy the rule to a new object so the backtrack indexes don't get overwritten.
+                  maxArg = new BinaryRule(binaryRuleX.getParent(), binaryRuleX.getLeftChild(), binaryRuleX.getRightChild());
+                  maxArg.setScore(binaryRuleX.getScore());
+                  maxArg.setLeftChildLeftIndex(i);
+                  maxArg.setLeftChildRightIndex(s);
+                  maxArg.setRightChildLeftIndex(s + 1);
+                  maxArg.setRightChildRightIndex(j);
                 }
               }
             }
 
-            pi.get(i).setCount(j, binaryRule.getParent(), maxScore);
+            if (maxArg != null) {
+              piBinary.get(i).setCount(j, parent, maxScore);
+              if (!bpBinary.get(i).containsKey(j)) {
+                bpBinary.get(i).put(j, new HashMap<String, BinaryRule>());
+              }
+              bpBinary.get(i).get(j).put(parent, maxArg);
+            }
           }
 
           // Step 2: Unary
-          for (UnaryRule unaryRule : grammar.getUnaryRules())
+          for (String parent : uc.closedUnaryRulesByParent.keySet())
           {
-            // If we already have the max of this non-terminal, ignore it.
-            if (piUnary.get(i).containsKey(j) && piUnary.get(i).getCounter(j).containsKey(unaryRule.getParent()))
-            {
-              continue;
-            }
-
             double maxScore = 0;
-            for (UnaryRule unaryRuleClosure : uc.getClosedUnaryRulesByParent(unaryRule.getParent()))
-            {
-              double score = unaryRuleClosure.getScore() * pi.get(i).getCount(j, unaryRuleClosure.getChild());
+            UnaryRule maxArg = null;
+            for (UnaryRule unaryRuleClosure : uc.getClosedUnaryRulesByParent(parent)) {
+              if (!piBinary.get(i).getCounter(j).containsKey(unaryRuleClosure.getChild()))
+              {
+                continue;
+              }
+
+              double score = unaryRuleClosure.getScore() * piBinary.get(i).getCount(j, unaryRuleClosure.getChild());
               if (score > maxScore) {
                 maxScore = score;
+                maxArg = unaryRuleClosure;
               }
             }
-            piUnary.get(i).setCount(j, unaryRule.getParent(), maxScore);
+            if (maxArg != null) {
+              piUnary.get(i).setCount(j, parent, maxScore);
+              if (!bpUnary.get(i).containsKey(j)) {
+                bpUnary.get(i).put(j, new HashMap<String, UnaryRule>());
+              }
+              bpUnary.get(i).get(j).put(parent, maxArg);
+            }
           }
         }
       }
 
+      // Build tree again
+      ArrayList<Tree<String>> children = new ArrayList<>();
+      children.add(buildTree(bpPi, bpUnary, bpBinary, "S", 1, sentence.size(), false));
+      Tree<String> annotatedBestParse = new Tree<>("ROOT", children);
+
       return TreeAnnotations.unAnnotateTree(annotatedBestParse);
+    }
+
+    private Tree<String> buildTree(
+            Map<Integer, HashMap<Integer, HashMap<String, UnaryRule>>> bpPi,
+            Map<Integer, HashMap<Integer, HashMap<String, UnaryRule>>> bpUnary,
+            Map<Integer, HashMap<Integer, HashMap<String, BinaryRule>>> bpBinary,
+            String root,
+            int leftIndex,
+            int rightIndex,
+            boolean binary
+    )
+    {
+      ArrayList<Tree<String>> children = new ArrayList<>();
+
+      if (leftIndex == rightIndex && bpPi.get(leftIndex).get(rightIndex).containsKey(root))
+      {
+        UnaryRule argMax = bpPi.get(leftIndex).get(rightIndex).get(root);
+        Tree<String> terminal = new Tree<>(argMax.getChild());
+        children.add(terminal);
+      }
+      else if (binary && leftIndex != rightIndex && bpBinary.get(leftIndex).get(rightIndex).containsKey(root))
+      {
+        BinaryRule argMax = bpBinary.get(leftIndex).get(rightIndex).get(root);
+        children.add(buildTree(bpPi, bpUnary, bpBinary, argMax.getLeftChild(), argMax.getLeftChildLeftIndex(), argMax.getLeftChildRightIndex(), false));
+        children.add(buildTree(bpPi, bpUnary, bpBinary, argMax.getRightChild(), argMax.getRightChildLeftIndex(), argMax.getRightChildRightIndex(), false));
+      }
+      else if (!binary && bpUnary.get(leftIndex).get(rightIndex).containsKey(root))
+      {
+        UnaryRule argMax = bpUnary.get(leftIndex).get(rightIndex).get(root);
+        children.add(buildTree(bpPi, bpUnary, bpBinary, argMax.getChild(), leftIndex, rightIndex, true));
+      }
+
+      Tree<String> treeRoot = new Tree<>(root, children);
+
+      return treeRoot;
     }
 
     public CKYParser(List<Tree<String>> trainTrees) {
@@ -264,7 +370,7 @@ public class PCFGParserTester {
       System.out.println("Build unary closures ... ");
       uc = new UnaryClosure(grammar);
       System.out.println("done.");
-      System.out.println(uc);
+      //System.out.println(uc);
 
       System.out.println("Training Lexicon ... ");
       lexicon = new Lexicon(annotatedTrainTrees);
@@ -526,6 +632,30 @@ public class PCFGParserTester {
     String rightChild;
     double score;
 
+    // Added: Let the Rule know about its position in the tree.
+    int leftChildLeftIndex;
+    int leftChildRightIndex;
+    int rightChildLeftIndex;
+    int rightChildRightIndex;
+
+    public int getLeftChildLeftIndex() { return leftChildLeftIndex; }
+
+    public void setLeftChildLeftIndex(int leftChildLeftIndex) { this.leftChildLeftIndex = leftChildLeftIndex; }
+
+    public int getLeftChildRightIndex() { return leftChildRightIndex; }
+
+    public void setLeftChildRightIndex(int leftChildRightIndex) { this.leftChildRightIndex = leftChildRightIndex; }
+
+    public int getRightChildLeftIndex() { return rightChildLeftIndex; }
+
+    public void setRightChildLeftIndex(int rightChildLeftIndex) { this.rightChildLeftIndex = rightChildLeftIndex; }
+
+    public int getRightChildRightIndex() { return rightChildRightIndex; }
+
+    public void setRightChildRightIndex(int rightChildRightIndex) { this.rightChildRightIndex = rightChildRightIndex; }
+
+    // end Added.
+
     public String getParent() {
       return parent;
     }
@@ -674,6 +804,27 @@ public class PCFGParserTester {
 
     public UnaryClosure(Grammar grammar) {
       this(grammar.getUnaryRules());
+      // This class won't add Reflexive rules to non-terminals that don't appear in unary rules
+      // Add them manually.
+      for (BinaryRule binaryRule : grammar.getBinaryRules())
+      {
+        boolean insert = true;
+        for (UnaryRule uRule : this.getClosedUnaryRulesByChild(binaryRule.getParent()))
+        {
+          if (uRule.getParent() == uRule.getChild())
+          {
+            insert = false;
+            break;
+          }
+        }
+        if (insert) {
+          UnaryRule reflexiveRule = new UnaryRule(binaryRule.getParent(), binaryRule.getParent());
+          reflexiveRule.setScore(1);
+          ArrayList<String> path = new ArrayList<>();
+          path.add(binaryRule.getParent());
+          addUnary(reflexiveRule, path);
+        }
+      }
     }
 
     private void addUnary(UnaryRule unaryRule, List<String> path) {
@@ -774,10 +925,10 @@ public class PCFGParserTester {
 
     // Set up default parameters and settings
     String basePath = ".";
-    boolean verbose = false;
+    boolean verbose = true;
     String testMode = "validate";
     int maxTrainLength = 1000;
-    int maxTestLength = 40;
+    int maxTestLength = 20;
 
     // Update defaults using command line specifications
     if (argMap.containsKey("-path")) {
@@ -819,22 +970,58 @@ public class PCFGParserTester {
     System.out.println("done. (" + testTrees.size() + " trees)");
 
     // TODO : Build a better parser!
-    Parser parser = new BaselineParser(trainTrees);
+    //final Parser parser = new BaselineParser(trainTrees);
+    Parser parser = new CKYParser(trainTrees);
 
     testParser(parser, testTrees, verbose);
   }
 
-  private static void testParser(Parser parser, List<Tree<String>> testTrees, boolean verbose) {
-    EnglishPennTreebankParseEvaluator.LabeledConstituentEval<String> eval = new EnglishPennTreebankParseEvaluator.LabeledConstituentEval<String>(Collections.singleton("ROOT"), new HashSet<String>(Arrays.asList(new String[]{"''", "``", ".", ":", ","})));
-    for (Tree<String> testTree : testTrees) {
-      List<String> testSentence = testTree.getYield();
-      Tree<String> guessedTree = parser.getBestParse(testSentence);
-      if (verbose) {
-        System.out.println("Guess:\n" + Trees.PennTreeRenderer.render(guessedTree));
-        System.out.println("Gold:\n" + Trees.PennTreeRenderer.render(testTree));
+  private static void testParser(final Parser parser, List<Tree<String>> testTrees, final boolean verbose) {
+    final EnglishPennTreebankParseEvaluator.LabeledConstituentEval<String> eval = new EnglishPennTreebankParseEvaluator.LabeledConstituentEval<String>(Collections.singleton("ROOT"), new HashSet<String>(Arrays.asList(new String[]{"''", "``", ".", ":", ","})));
+    final Object evalLock = new Object();
+
+    ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+    try {
+      for (final Tree<String> testTree : testTrees) {
+        exec.submit(new Runnable() {
+          @Override
+          public void run() {
+            List<String> testSentence = testTree.getYield();
+
+            long startTime = System.nanoTime();
+            Tree<String> guessedTree = parser.getBestParse(testSentence);
+            long endTime = System.nanoTime() - startTime;
+
+            synchronized (evalLock) {
+              if (verbose) {
+                System.out.println("Guess:\n" + Trees.PennTreeRenderer.render(guessedTree));
+                System.out.println("Gold:\n" + Trees.PennTreeRenderer.render(testTree));
+              }
+
+              eval.evaluate(guessedTree, testTree);
+              System.out.println("Time: " + endTime / 1000000 + " ms");
+            }
+          }
+        });
       }
-      eval.evaluate(guessedTree, testTree);
+    } finally {
+      exec.shutdown();
     }
+
+    try {
+      boolean finished = exec.awaitTermination(50000, TimeUnit.MINUTES);
+    } catch (InterruptedException e) {
+      System.out.println("Failed");
+    }
+//    for (Tree<String> testTree : testTrees) {
+//      List<String> testSentence = testTree.getYield();
+//      Tree<String> guessedTree = parser.getBestParse(testSentence);
+//      if (verbose) {
+//        System.out.println("Guess:\n" + Trees.PennTreeRenderer.render(guessedTree));
+//        System.out.println("Gold:\n" + Trees.PennTreeRenderer.render(testTree));
+//      }
+//      eval.evaluate(guessedTree, testTree);
+//    }
     eval.display(true);
   }
 
