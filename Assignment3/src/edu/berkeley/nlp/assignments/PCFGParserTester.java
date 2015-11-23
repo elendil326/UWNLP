@@ -314,10 +314,24 @@ public class PCFGParserTester {
 
       // Build tree again
       ArrayList<Tree<String>> children = new ArrayList<>();
-      children.add(buildTree(bpPi, bpUnary, bpBinary, "S", 1, sentence.size(), false));
+      String root = "";
+      if (sentence.size() <= 3 && piUnary.get(1) != null && piUnary.get(1).getCounter(sentence.size()) != null) {
+        root = piUnary.get(1).getCounter(sentence.size()).argMax();
+      }
+      else
+      {
+        root = "S";
+        //root = "S=ROOT";
+      }
+      //children.add(buildTree(bpPi, bpUnary, bpBinary, root, 1, sentence.size(), false));
+      children.add(buildTree(bpPi, bpUnary, bpBinary, root, 1, sentence.size(), false));
       Tree<String> annotatedBestParse = new Tree<>("ROOT", children);
 
       return TreeAnnotations.unAnnotateTree(annotatedBestParse);
+      //return TreeAnnotationsVertical2Order.unAnnotateTree(annotatedBestParse);
+      //return TreeAnnotationsHorizontal1Order.unAnnotateTree(annotatedBestParse);
+      //return TreeAnnotationsHorizontal2Order.unAnnotateTree(annotatedBestParse);
+      //return TreeAnnotationsVertical2OrderHorizontal2Order.unAnnotateTree(annotatedBestParse);
     }
 
     private Tree<String> buildTree(
@@ -338,11 +352,19 @@ public class PCFGParserTester {
         Tree<String> terminal = new Tree<>(argMax.getChild());
         children.add(terminal);
       }
+      else if (binary && leftIndex != rightIndex && (bpBinary.get(leftIndex) == null || bpBinary.get(leftIndex).get(rightIndex) == null))
+      {
+        System.out.println("Invalid! Binary rule could not be found in [" + leftIndex + ", " + rightIndex + "]. Looking for " + root);
+      }
       else if (binary && leftIndex != rightIndex && bpBinary.get(leftIndex).get(rightIndex).containsKey(root))
       {
         BinaryRule argMax = bpBinary.get(leftIndex).get(rightIndex).get(root);
         children.add(buildTree(bpPi, bpUnary, bpBinary, argMax.getLeftChild(), argMax.getLeftChildLeftIndex(), argMax.getLeftChildRightIndex(), false));
         children.add(buildTree(bpPi, bpUnary, bpBinary, argMax.getRightChild(), argMax.getRightChildLeftIndex(), argMax.getRightChildRightIndex(), false));
+      }
+      else if (!binary && (bpUnary.get(leftIndex) == null || bpUnary.get(leftIndex).get(rightIndex) == null))
+      {
+        System.out.println("Invalid! Unary rule could not be found in [" + leftIndex + ", " + rightIndex + "]. Looking for " + root);
       }
       else if (!binary && bpUnary.get(leftIndex).get(rightIndex).containsKey(root))
       {
@@ -378,11 +400,17 @@ public class PCFGParserTester {
     }
 
     private List<Tree<String>> annotateTrees(List<Tree<String>> trees) {
-      List<Tree<String>> annotatedTrees = new ArrayList<Tree<String>>();
       for (Tree<String> tree : trees) {
-        annotatedTrees.add(TreeAnnotations.annotateTree(tree));
+        // Replace in place to avoid running out of memory.
+        Tree<String> annotatedTree = TreeAnnotations.annotateTree(tree);
+        //Tree<String> annotatedTree = TreeAnnotationsVertical2Order.annotateTree(tree);
+        //Tree<String> annotatedTree = TreeAnnotationsHorizontal1Order.annotateTree(tree);
+        //Tree<String> annotatedTree = TreeAnnotationsHorizontal2Order.annotateTree(tree);
+        //Tree<String> annotatedTree = TreeAnnotationsVertical2OrderHorizontal2Order.annotateTree(tree);
+        tree.setLabel(annotatedTree.getLabel());
+        tree.setChildren(annotatedTree.getChildren());
       }
-      return annotatedTrees;
+      return trees;
     }
   }
 
@@ -420,6 +448,197 @@ public class PCFGParserTester {
         children.add(rightTree);
       }
       return new Tree<String>(intermediateLabel, children);
+    }
+
+    public static Tree<String> unAnnotateTree(Tree<String> annotatedTree) {
+      // Remove intermediate nodes (labels beginning with "@"
+      // Remove all material on node labels which follow their base symbol (cuts at the leftmost -, ^, or : character)
+      // Examples: a node with label @NP->DT_JJ will be spliced out, and a node with label NP^S will be reduced to NP
+      Tree<String> debinarizedTree = Trees.spliceNodes(annotatedTree, new Filter<String>() {
+        public boolean accept(String s) {
+          return s.startsWith("@");
+        }
+      });
+      Tree<String> unAnnotatedTree = (new Trees.FunctionNodeStripper()).transformTree(debinarizedTree);
+      return unAnnotatedTree;
+    }
+  }
+
+  static class TreeAnnotationsVertical2Order {
+    public static Tree<String> annotateTree(Tree<String> unAnnotatedTree) {
+      // Currently, the only annotation done is a lossless binarization
+      // TODO : change the annotation from a lossless binarization to a finite-order markov process (try at least 1st and 2nd order)
+      return binarizeTree(unAnnotatedTree, "");
+    }
+
+    private static Tree<String> binarizeTree(Tree<String> tree, String parent) {
+      if (tree.isLeaf())
+        return tree;
+
+      String label = tree.getLabel() + "=" + parent;
+      if (tree.getChildren().size() == 1) {
+        return new Tree<>(label, Collections.singletonList(binarizeTree(tree.getChildren().get(0), tree.getLabel())));
+      }
+      // otherwise, it's a binary-or-more local tree, so decompose it into a sequence of binary and unary trees.
+      String intermediateLabel = "@" + tree.getLabel() + "->";
+      Tree<String> intermediateTree = binarizeTreeHelper(tree, 0, intermediateLabel, tree.getLabel(), tree.getLabel());
+      return new Tree<>(label, intermediateTree.getChildren());
+    }
+
+    private static Tree<String> binarizeTreeHelper(Tree<String> tree, int numChildrenGenerated, String intermediateLabel, String leftParent, String rightParent) {
+      Tree<String> leftTree = tree.getChildren().get(numChildrenGenerated);
+      List<Tree<String>> children = new ArrayList<>();
+      children.add(binarizeTree(leftTree, leftParent));
+      if (numChildrenGenerated < tree.getChildren().size() - 1) {
+        Tree<String> rightTree = binarizeTreeHelper(tree, numChildrenGenerated + 1, intermediateLabel + "_" + leftTree.getLabel(), intermediateLabel + "_" + leftTree.getLabel(), leftParent);
+        children.add(rightTree);
+      }
+      return new Tree<>(intermediateLabel + "=" + rightParent, children);
+    }
+
+    public static Tree<String> unAnnotateTree(Tree<String> annotatedTree) {
+      // Remove intermediate nodes (labels beginning with "@"
+      // Remove all material on node labels which follow their base symbol (cuts at the leftmost -, ^, or : character)
+      // Examples: a node with label @NP->DT_JJ will be spliced out, and a node with label NP^S will be reduced to NP
+      Tree<String> debinarizedTree = Trees.spliceNodes(annotatedTree, new Filter<String>() {
+        public boolean accept(String s) {
+          return s.startsWith("@");
+        }
+      });
+      Tree<String> unAnnotatedTree = (new Trees.FunctionNodeStripper()).transformTree(debinarizedTree);
+      return unAnnotatedTree;
+    }
+  }
+
+  static class TreeAnnotationsHorizontal1Order {
+    public static Tree<String> annotateTree(Tree<String> unAnnotatedTree) {
+      // Currently, the only annotation done is a lossless binarization
+      // TODO : mark nodes with the label of their parent nodes, giving a second order vertical markov process
+      return binarizeTree(unAnnotatedTree);
+    }
+
+    private static Tree<String> binarizeTree(Tree<String> tree) {
+      String label = tree.getLabel();
+      if (tree.isLeaf())
+        return new Tree<>(label);
+      if (tree.getChildren().size() == 1) {
+        return new Tree<>(label, Collections.singletonList(binarizeTree(tree.getChildren().get(0))));
+      }
+      // otherwise, it's a binary-or-more local tree, so decompose it into a sequence of binary and unary trees.
+      String intermediateLabel = "@" + label + "->";
+      Tree<String> intermediateTree = binarizeTreeHelper(tree, 0, intermediateLabel, "");
+      return new Tree<>(label, intermediateTree.getChildren());
+    }
+
+    private static Tree<String> binarizeTreeHelper(Tree<String> tree, int numChildrenGenerated, String intermediateLabel, String leftLabel) {
+      Tree<String> leftTree = tree.getChildren().get(numChildrenGenerated);
+      List<Tree<String>> children = new ArrayList<>();
+      children.add(binarizeTree(leftTree));
+      if (numChildrenGenerated < tree.getChildren().size() - 1) {
+        Tree<String> rightTree = binarizeTreeHelper(tree, numChildrenGenerated + 1, intermediateLabel, leftTree.getLabel());
+        children.add(rightTree);
+      }
+      return new Tree<String>(intermediateLabel + "..._" + leftLabel, children);
+    }
+
+    public static Tree<String> unAnnotateTree(Tree<String> annotatedTree) {
+      // Remove intermediate nodes (labels beginning with "@"
+      // Remove all material on node labels which follow their base symbol (cuts at the leftmost -, ^, or : character)
+      // Examples: a node with label @NP->DT_JJ will be spliced out, and a node with label NP^S will be reduced to NP
+      Tree<String> debinarizedTree = Trees.spliceNodes(annotatedTree, new Filter<String>() {
+        public boolean accept(String s) {
+          return s.startsWith("@");
+        }
+      });
+      Tree<String> unAnnotatedTree = (new Trees.FunctionNodeStripper()).transformTree(debinarizedTree);
+      return unAnnotatedTree;
+    }
+  }
+
+  static class TreeAnnotationsHorizontal2Order {
+    public static Tree<String> annotateTree(Tree<String> unAnnotatedTree) {
+      // Currently, the only annotation done is a lossless binarization
+      // TODO : mark nodes with the label of their parent nodes, giving a second order vertical markov process
+      return binarizeTree(unAnnotatedTree);
+    }
+
+    private static Tree<String> binarizeTree(Tree<String> tree) {
+      String label = tree.getLabel();
+      if (tree.isLeaf())
+        return new Tree<>(label);
+      if (tree.getChildren().size() == 1) {
+        return new Tree<>(label, Collections.singletonList(binarizeTree(tree.getChildren().get(0))));
+      }
+      // otherwise, it's a binary-or-more local tree, so decompose it into a sequence of binary and unary trees.
+      String intermediateLabel = "@" + label + "->";
+      Tree<String> intermediateTree = binarizeTreeHelper(tree, 0, intermediateLabel, "", "");
+      return new Tree<>(label, intermediateTree.getChildren());
+    }
+
+    private static Tree<String> binarizeTreeHelper(Tree<String> tree, int numChildrenGenerated, String intermediateLabel, String leftLabel, String leftLeftLabel) {
+      Tree<String> leftTree = tree.getChildren().get(numChildrenGenerated);
+      List<Tree<String>> children = new ArrayList<>();
+      children.add(binarizeTree(leftTree));
+      if (numChildrenGenerated < tree.getChildren().size() - 1) {
+        Tree<String> rightTree = binarizeTreeHelper(tree, numChildrenGenerated + 1, intermediateLabel, leftLeftLabel, leftTree.getLabel());
+        children.add(rightTree);
+      }
+      String newLabel = intermediateLabel + "...";
+      newLabel += leftLabel.equals("") ? "" : "_" + leftLabel;
+      return new Tree<>(newLabel + "_" + leftLeftLabel, children);
+    }
+
+    public static Tree<String> unAnnotateTree(Tree<String> annotatedTree) {
+      // Remove intermediate nodes (labels beginning with "@"
+      // Remove all material on node labels which follow their base symbol (cuts at the leftmost -, ^, or : character)
+      // Examples: a node with label @NP->DT_JJ will be spliced out, and a node with label NP^S will be reduced to NP
+      Tree<String> debinarizedTree = Trees.spliceNodes(annotatedTree, new Filter<String>() {
+        public boolean accept(String s) {
+          return s.startsWith("@");
+        }
+      });
+      Tree<String> unAnnotatedTree = (new Trees.FunctionNodeStripper()).transformTree(debinarizedTree);
+      return unAnnotatedTree;
+    }
+  }
+
+  static class TreeAnnotationsVertical2OrderHorizontal2Order {
+    public static Tree<String> annotateTree(Tree<String> unAnnotatedTree) {
+      // Currently, the only annotation done is a lossless binarization
+      // TODO : mark nodes with the label of their parent nodes, giving a second order vertical markov process
+      return binarizeTree(unAnnotatedTree, "");
+    }
+
+    private static Tree<String> binarizeTree(Tree<String> tree, String parent) {
+      if (tree.isLeaf())
+        return tree;
+
+      String label = tree.getLabel() + "=" + parent;
+      if (tree.getChildren().size() == 1) {
+        return new Tree<>(label, Collections.singletonList(binarizeTree(tree.getChildren().get(0), tree.getLabel())));
+      }
+      // otherwise, it's a binary-or-more local tree, so decompose it into a sequence of binary and unary trees.
+      String intermediateLabel = "@" + tree.getLabel() + "->";
+      Tree<String> intermediateTree = binarizeTreeHelper(tree, 0, intermediateLabel, "", "", tree.getLabel(), tree.getLabel());
+      return new Tree<>(label, intermediateTree.getChildren());
+    }
+
+    private static Tree<String> binarizeTreeHelper(Tree<String> tree, int numChildrenGenerated, String intermediateLabel, String leftLabel, String leftLeftLabel, String leftParent, String rightParent) {
+      Tree<String> leftTree = tree.getChildren().get(numChildrenGenerated);
+      List<Tree<String>> children = new ArrayList<>();
+      children.add(binarizeTree(leftTree, leftParent));
+      String newLabel = intermediateLabel + "...";
+      newLabel += leftLeftLabel.equals("") ? leftLeftLabel : "_" + leftLeftLabel;
+      newLabel += "_" + leftTree.getLabel();
+      if (numChildrenGenerated < tree.getChildren().size() - 1) {
+        Tree<String> rightTree = binarizeTreeHelper(tree, numChildrenGenerated + 1, intermediateLabel, leftLeftLabel, leftTree.getLabel(), newLabel, leftParent);
+        children.add(rightTree);
+      }
+
+      newLabel = intermediateLabel + "...";
+      newLabel += leftLabel.equals("") ? "" : "_" + leftLabel;
+      newLabel += "_" + leftLeftLabel;
+      return new Tree<>(newLabel + "=" + rightParent, children);
     }
 
     public static Tree<String> unAnnotateTree(Tree<String> annotatedTree) {
@@ -928,7 +1147,7 @@ public class PCFGParserTester {
     boolean verbose = true;
     String testMode = "validate";
     int maxTrainLength = 1000;
-    int maxTestLength = 20;
+    int maxTestLength = 40;
 
     // Update defaults using command line specifications
     if (argMap.containsKey("-path")) {
@@ -978,50 +1197,50 @@ public class PCFGParserTester {
 
   private static void testParser(final Parser parser, List<Tree<String>> testTrees, final boolean verbose) {
     final EnglishPennTreebankParseEvaluator.LabeledConstituentEval<String> eval = new EnglishPennTreebankParseEvaluator.LabeledConstituentEval<String>(Collections.singleton("ROOT"), new HashSet<String>(Arrays.asList(new String[]{"''", "``", ".", ":", ","})));
-    final Object evalLock = new Object();
-
-    ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-    try {
-      for (final Tree<String> testTree : testTrees) {
-        exec.submit(new Runnable() {
-          @Override
-          public void run() {
-            List<String> testSentence = testTree.getYield();
-
-            long startTime = System.nanoTime();
-            Tree<String> guessedTree = parser.getBestParse(testSentence);
-            long endTime = System.nanoTime() - startTime;
-
-            synchronized (evalLock) {
-              if (verbose) {
-                System.out.println("Guess:\n" + Trees.PennTreeRenderer.render(guessedTree));
-                System.out.println("Gold:\n" + Trees.PennTreeRenderer.render(testTree));
-              }
-
-              eval.evaluate(guessedTree, testTree);
-              System.out.println("Time: " + endTime / 1000000 + " ms");
-            }
-          }
-        });
-      }
-    } finally {
-      exec.shutdown();
-    }
-
-    try {
-      boolean finished = exec.awaitTermination(50000, TimeUnit.MINUTES);
-    } catch (InterruptedException e) {
-      System.out.println("Failed");
-    }
-//    for (Tree<String> testTree : testTrees) {
-//      List<String> testSentence = testTree.getYield();
-//      Tree<String> guessedTree = parser.getBestParse(testSentence);
-//      if (verbose) {
-//        System.out.println("Guess:\n" + Trees.PennTreeRenderer.render(guessedTree));
-//        System.out.println("Gold:\n" + Trees.PennTreeRenderer.render(testTree));
+//    final Object evalLock = new Object();
+//
+//    ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+//    try {
+//      for (final Tree<String> testTree : testTrees) {
+//        exec.submit(new Runnable() {
+//          @Override
+//          public void run() {
+//            List<String> testSentence = testTree.getYield();
+//
+//            long startTime = System.nanoTime();
+//            Tree<String> guessedTree = parser.getBestParse(testSentence);
+//            long endTime = System.nanoTime() - startTime;
+//
+//            synchronized (evalLock) {
+//              if (verbose) {
+//                System.out.println("Guess:\n" + Trees.PennTreeRenderer.render(guessedTree));
+//                System.out.println("Gold:\n" + Trees.PennTreeRenderer.render(testTree));
+//              }
+//
+//              eval.evaluate(guessedTree, testTree);
+//              System.out.println("Time: " + endTime / 1000000 + " ms");
+//            }
+//          }
+//        });
 //      }
-//      eval.evaluate(guessedTree, testTree);
+//    } finally {
+//      exec.shutdown();
 //    }
+//
+//    try {
+//      boolean finished = exec.awaitTermination(50000, TimeUnit.MINUTES);
+//    } catch (InterruptedException e) {
+//      System.out.println("Failed");
+//    }
+    for (Tree<String> testTree : testTrees) {
+      List<String> testSentence = testTree.getYield();
+      Tree<String> guessedTree = parser.getBestParse(testSentence);
+      if (verbose) {
+        System.out.println("Guess:\n" + Trees.PennTreeRenderer.render(guessedTree));
+        System.out.println("Gold:\n" + Trees.PennTreeRenderer.render(testTree));
+      }
+      eval.evaluate(guessedTree, testTree);
+    }
     eval.display(true);
   }
 
