@@ -320,18 +320,14 @@ public class PCFGParserTester {
       }
       else
       {
-        root = "S";
-        //root = "S=ROOT";
+        //root = "S";
+        root = "S=ROOT";
       }
       //children.add(buildTree(bpPi, bpUnary, bpBinary, root, 1, sentence.size(), false));
       children.add(buildTree(bpPi, bpUnary, bpBinary, root, 1, sentence.size(), false));
       Tree<String> annotatedBestParse = new Tree<>("ROOT", children);
 
       return TreeAnnotations.unAnnotateTree(annotatedBestParse);
-      //return TreeAnnotationsVertical2Order.unAnnotateTree(annotatedBestParse);
-      //return TreeAnnotationsHorizontal1Order.unAnnotateTree(annotatedBestParse);
-      //return TreeAnnotationsHorizontal2Order.unAnnotateTree(annotatedBestParse);
-      //return TreeAnnotationsVertical2OrderHorizontal2Order.unAnnotateTree(annotatedBestParse);
     }
 
     private Tree<String> buildTree(
