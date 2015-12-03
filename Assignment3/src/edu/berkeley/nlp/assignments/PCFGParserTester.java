@@ -320,8 +320,8 @@ public class PCFGParserTester {
       }
       else
       {
-        //root = "S";
-        root = "S=ROOT";
+        root = "S";
+        //root = "S=ROOT";
       }
       //children.add(buildTree(bpPi, bpUnary, bpBinary, root, 1, sentence.size(), false));
       children.add(buildTree(bpPi, bpUnary, bpBinary, root, 1, sentence.size(), false));
@@ -1141,7 +1141,7 @@ public class PCFGParserTester {
     // Set up default parameters and settings
     String basePath = ".";
     boolean verbose = true;
-    String testMode = "validate";
+    String testMode = "test";
     int maxTrainLength = 1000;
     int maxTestLength = 40;
 
